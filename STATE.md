@@ -1,10 +1,18 @@
 # State
 
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 ---
 
 ## Current focus
+
+**Playable through `8173085` (pushed to origin/main).** The game now boots through first-launch → home → and into either **Campaign** (mission 1 authored) or **solo PVE** (daily seeded Scale 1–5 generated maps). Full match loop, pause menu, settings, breakpoint-tuned upgrades, partial-score saving. Map resource framework + real procgen + UI/navigation all landed and verified.
+
+**Most likely next steps:** more campaign missions; PVE backend (weekly/monthly windows, lobbies, leaderboards — deferred); audio (bus layout + sounds, which would make the Music/SFX sliders live); threshold calibration from real scores; or PVP. Open render fallback: if the build-mode overlay ever regresses on perf, replace the immediate-mode `_draw` dashes with a `Line2D`.
+
+---
+
+### Session log (chronological, most recent first)
 
 **Map resource framework built and verified (Claude Code, 2026-05-30).** The mission/map resource architecture from `DESIGN_MODES.md` is now implemented in Godot:
 - `GameConstants` autoload holds all global tuning (economy, build timings, mob HP growth, tower base stats, crit/multishot caps, upgrade ramp, lives). Registered in `project.godot`.
@@ -42,7 +50,7 @@ Last updated: 2026-05-30
 - Verified via a throwaway harness: 100 maps (tiers 1–5 × 20 seeds) passed every DESIGN_MODES procgen constraint; determinism confirmed; a generated map loads + builds through `map_loader` (same path as campaign). Path/straight ratio avg 1.36.
 - **Not yet reachable in-app** — there's no PVE/PVP entry to launch a generated map. The generator is validated infrastructure; wiring a playable PVE-solo entry (map select → generated map → match) is the obvious next step if you want to feel it in the real app.
 
-**Playtest fixes round 2 (2026-05-31) — AWAITING RE-TEST, NOT COMMITTED.** Four more from the second PVE playtest:
+**Playtest fixes round 2 (2026-05-31) — shipped in commit `8173085`, pushed.** Four more from the second PVE playtest (render fix confirmed in-game by the user):
 1. **Partial scores count** — bowing out mid-match now records the current score. `SceneManager.report_match_result(damage)` computes the medal itself; new `leave_match_to_home(damage)` records-then-home, wired into the gold-reached popup (`win_panel`) and the pause-menu quit. Best-kept storage means a partial never beats a full run (the user's no-risk call). Pause SP quit message updated ("Your score so far is saved").
 2. **Quit Game from main menu** — `home_screen` bottom-left button → `get_tree().quit()`.
 3. **HUD "0/0" at start fixed** — the controller emits `towers_changed` before the HUD is in the tree, so the HUD now seeds count/cap from the controller on connect (shows e.g. `0 / 60`).
@@ -63,7 +71,7 @@ All verified headless (builds clean; breakpoint table confirmed). Awaiting the u
 
 ---
 
-**PVE-solo built (2026-05-30).** Generated maps are now playable:
+**PVE-solo (2026-05-30, shipped in commit `8173085`).** Generated maps are now playable:
 - Home `PVE` button enabled → `pve_select` scene: 5 maps (Scale 1–5) seeded from the current date (`hash(window_date) + tier`), so the set is stable per day and changes daily — locally, no backend. Each card shows rounds/supply/zones/mobs + local best score. `SceneManager.start_pve_map` → match (solo = single-player pause variant).
 - `SaveData` stores local PVE best scores per `window_date|tier` (`record_pve_score`/`best_pve_score`); `SceneManager.report_match_result` records PVE scores (campaign still records medals).
 - Reuses generator + loader + match + pause + settings unchanged. Verified headless: select builds 5 maps, a generated map loads (24 nodes), score round-trips.
