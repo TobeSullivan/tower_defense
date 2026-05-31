@@ -100,8 +100,8 @@ func _on_match_ended() -> void:
 	_damage_label.text = "Total damage: %d  ·  Rounds: %d" % [damage, round_manager.max_rounds]
 	_populate_thresholds(damage)
 	_panel.visible = true
-	# Persist the campaign medal (no-op for non-campaign maps).
-	SceneManager.report_match_result(damage, medal)
+	# Persist the result (campaign medal / PVE score; no-op for PVP).
+	SceneManager.report_match_result(damage)
 
 func _populate_thresholds(damage: int) -> void:
 	for child in _thresholds_vbox.get_children():

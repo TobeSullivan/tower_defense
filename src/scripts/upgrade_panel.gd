@@ -110,8 +110,22 @@ func show_for(tower: Node2D) -> void:
 	if is_instance_valid(_target_tower):
 		_target_tower.set_selected(true)
 	_refresh_labels()
-	_panel.position = tower.position + Vector2(80, -120)
 	_panel.visible = true
+	_position_near(tower)
+
+# Place the panel beside the tower but always fully on-screen: flip to the
+# tower's left if it would spill off the right edge, then clamp into the viewport
+# so a tower near any edge never hides part of the panel.
+func _position_near(tower: Node2D) -> void:
+	var panel_size := _panel.get_combined_minimum_size()
+	var vp := get_viewport().get_visible_rect().size
+	var margin := 8.0
+	var pos := tower.position + Vector2(80, -120)
+	if pos.x + panel_size.x > vp.x - margin:
+		pos.x = tower.position.x - 80.0 - panel_size.x
+	pos.x = clampf(pos.x, margin, maxf(margin, vp.x - panel_size.x - margin))
+	pos.y = clampf(pos.y, margin, maxf(margin, vp.y - panel_size.y - margin))
+	_panel.position = pos
 
 func hide_panel() -> void:
 	if _target_tower != null and is_instance_valid(_target_tower):

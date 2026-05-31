@@ -78,6 +78,10 @@ func _ready() -> void:
 		round_manager.kills_changed.connect(func(_k): _refresh())
 	if build_controller != null:
 		build_controller.towers_changed.connect(_on_towers_changed)
+		# The controller emits towers_changed in its own _ready, before the HUD is
+		# in the tree — so seed the initial count/cap here or it reads "0 / 0".
+		_towers_count = build_controller.towers.size()
+		_towers_cap = build_controller.max_towers
 	_refresh()
 
 func _on_towers_changed(count: int, cap: int) -> void:

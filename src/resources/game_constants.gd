@@ -32,7 +32,19 @@ const SPAWN_INTERVAL := 1.0        # seconds between mob spawns
 const TOWER_BASE_RANGE := 160.0    # pixels (~3.3 tiles at 48px/tile)
 const TOWER_BASE_DAMAGE := 25.0
 const TOWER_BASE_COOLDOWN := 0.8
-const TOWER_TIER_INCREMENT := 0.10 # +10% per tier on most stats
+
+# Per-tier upgrade increments, tuned to land on meaningful breakpoints instead of
+# a flat +10% that often does nothing. Damage is anchored to the base mob (100 HP)
+# shots-to-kill thresholds: 0.34/tier (just over 1/3 — exact 1/3 lands on the
+# boundary and floating-point keeps it at 4 shots) puts tier 1 at the 3-shot
+# breakpoint, tier 3 at 2-shot, tier 9 at 1-shot. Mob HP scales each round, so
+# these are the round-1 anchors; later rounds push the breakpoints up, which keeps
+# damage relevant. Attack speed is bumped so extra-shot crossings happen sooner
+# (exact breakpoints are placement-dependent — they vary with how a mob crosses a
+# tower's range). Range stays linear (coverage, no discrete breakpoint).
+const TOWER_DAMAGE_INCREMENT := 0.34
+const TOWER_ATTACK_SPEED_INCREMENT := 0.15
+const TOWER_RANGE_INCREMENT := 0.10
 
 # === Crit / multishot caps ===
 const CRIT_CHANCE_PER_TIER := 0.10

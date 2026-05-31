@@ -21,6 +21,7 @@ func _ready() -> void:
 	_settings = SettingsPanelScript.new()
 	add_child(_settings)
 	_build_corner_settings()
+	_build_corner_quit()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
@@ -80,8 +81,7 @@ func _build_center() -> void:
 	vbox.add_child(_spacer(18))
 
 	var pve := _primary_button("PVE")
-	pve.disabled = true
-	pve.tooltip_text = "Coming soon"
+	pve.pressed.connect(func(): SceneManager.goto_pve_select())
 	vbox.add_child(pve)
 
 	var pvp := _primary_button("PVP")
@@ -89,7 +89,7 @@ func _build_center() -> void:
 	pvp.tooltip_text = "Coming soon"
 	vbox.add_child(pvp)
 
-	var soon := _label("PVE / PVP coming soon", 14, Color(0.5, 0.55, 0.65))
+	var soon := _label("PVP coming soon", 14, Color(0.5, 0.55, 0.65))
 	soon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(soon)
 
@@ -114,6 +114,18 @@ func _build_corner_settings() -> void:
 	settings.offset_right = -20
 	settings.offset_bottom = -16
 	add_child(settings)
+
+func _build_corner_quit() -> void:
+	var quit := Button.new()
+	quit.text = "Quit Game"
+	quit.add_theme_font_size_override("font_size", 14)
+	quit.pressed.connect(func(): get_tree().quit())
+	quit.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	quit.offset_left = 20
+	quit.offset_top = -52
+	quit.offset_right = 150
+	quit.offset_bottom = -16
+	add_child(quit)
 
 func _primary_button(text: String) -> Button:
 	var b := Button.new()

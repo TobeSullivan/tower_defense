@@ -42,10 +42,37 @@ Last updated: 2026-05-30
 - Verified via a throwaway harness: 100 maps (tiers 1–5 × 20 seeds) passed every DESIGN_MODES procgen constraint; determinism confirmed; a generated map loads + builds through `map_loader` (same path as campaign). Path/straight ratio avg 1.36.
 - **Not yet reachable in-app** — there's no PVE/PVP entry to launch a generated map. The generator is validated infrastructure; wiring a playable PVE-solo entry (map select → generated map → match) is the obvious next step if you want to feel it in the real app.
 
+**Playtest fixes round 2 (2026-05-31) — AWAITING RE-TEST, NOT COMMITTED.** Four more from the second PVE playtest:
+1. **Partial scores count** — bowing out mid-match now records the current score. `SceneManager.report_match_result(damage)` computes the medal itself; new `leave_match_to_home(damage)` records-then-home, wired into the gold-reached popup (`win_panel`) and the pause-menu quit. Best-kept storage means a partial never beats a full run (the user's no-risk call). Pause SP quit message updated ("Your score so far is saved").
+2. **Quit Game from main menu** — `home_screen` bottom-left button → `get_tree().quit()`.
+3. **HUD "0/0" at start fixed** — the controller emits `towers_changed` before the HUD is in the tree, so the HUD now seeds count/cap from the controller on connect (shows e.g. `0 / 60`).
+4. **Memory/near-crash — root-caused to render-side path overlay.** User confirmed it happened **while hovering in build mode** (no mobs/firing). Measured the hover path headless (dense 80-tower maze, 600 frames of validity + projected-path pathfinding): objects + memory **dead flat at 29.3 MB** — so the pathfinder/logic does NOT leak. Real cause: `build_controller` repainted the whole maze path **every frame** with `draw_line(antialiased=true)` — hundreds of AA segments/frame in the GL-compat renderer, and doubling supply made the maze path much longer, so it spiked. Fixes: **dropped antialiasing** on the dash draw and **throttled the overlay repaint to ~30fps**. Also kept (separate, still worthwhile): `mob.gd`/`death_fx.gd` now share one `SpriteFrames` instead of rebuilding per spawn/death — reduces run-phase churn, though it was NOT the hover cause.
+   - **MUST re-verify on the real renderer**: hover in build mode on a dense Scale 4/5 map and watch memory. If it still climbs, the fallback is to replace the immediate-mode `_draw` overlay with a `Line2D` (set points once on path change) instead of redrawing every frame.
+
+All code verified headless (builds clean; HUD cap correct; firing+deaths work with shared frames; partial score records; hover-path memory flat). The render fix itself can't be measured headless (dummy renderer). See [[reference-godot-headless-verify]].
+
+---
+
+**Playtest fixes round 1 (2026-05-31).** Four changes from the first PVE playtest, on top of the PVE-solo work below:
+1. **Supply doubled** — PVE scale table now 20/40/60/80/100 (was 10–50); campaign `mission_01` cap 50→100. The 40×22 map was too big to maze with the old supply. (Generated thresholds scale with supply, so they roughly doubled too — still soft.)
+2. **Checkpoint count shown** on PVE map cards alongside rounds/supply/zones/mobs.
+3. **Upgrade panel clamped on-screen** (`upgrade_panel._position_near`) — flips to the tower's left near the right edge and clamps into the viewport, so towers near any edge no longer hide part of the panel.
+4. **Breakpoint-tuned upgrades** — replaced the flat +10%/tier with per-stat increments in GameConstants. Damage `0.34`/tier anchored to base-mob (100 HP) shots-to-kill: tier 1 → 3 shots, tier 3 → 2, tier 9 → 1 (verified via harness). Attack speed `0.15`/tier (extra-shot crossings sooner; placement-dependent). Range stays `0.10`. Crit/multishot unchanged (already discrete/probabilistic).
+
+All verified headless (builds clean; breakpoint table confirmed). Awaiting the user's re-test of feel before commit.
+
+---
+
+**PVE-solo built (2026-05-30).** Generated maps are now playable:
+- Home `PVE` button enabled → `pve_select` scene: 5 maps (Scale 1–5) seeded from the current date (`hash(window_date) + tier`), so the set is stable per day and changes daily — locally, no backend. Each card shows rounds/supply/zones/mobs + local best score. `SceneManager.start_pve_map` → match (solo = single-player pause variant).
+- `SaveData` stores local PVE best scores per `window_date|tier` (`record_pve_score`/`best_pve_score`); `SceneManager.report_match_result` records PVE scores (campaign still records medals).
+- Reuses generator + loader + match + pause + settings unchanged. Verified headless: select builds 5 maps, a generated map loads (24 nodes), score round-trips.
+- **Caveats:** (1) generated thresholds are very high/uncalibrated (Scale 3 gold ~656k) — fine for PVE since it's high-score-driven and medals are stretch goals, but needs playtest calibration; (2) the campaign-style gold-reached early-win popup is technically still active in PVE but effectively never fires given the high thresholds (leave unless it misbehaves); (3) only the daily window is implemented (weekly/monthly + leaderboards/lobbies remain deferred).
+
 **Next build focus:**
-- Playable PVE-solo entry so generated maps can actually be played (would also let you eyeball generated layouts).
+- Threshold calibration once real PVE scores exist (lower `THRESHOLD_COVERAGE` or rework formula).
 - Audio bus layout + actual sounds (would make Music/SFX volume sliders live).
-- Full PVE (windows, lobby, leaderboards) and PVP backends — deferred (multiplayer).
+- Full PVE (weekly/monthly windows, lobby, leaderboards) and PVP backends — deferred (multiplayer).
 
 ---
 

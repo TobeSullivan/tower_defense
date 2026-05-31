@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS := {
 var data := {
 	"first_launch_done": false,
 	"campaign_medals": {},  # mission_index (as String) -> "bronze"/"silver"/"gold"
+	"pve_best_scores": {},   # "window_date|tier" -> best score (local; no backend yet)
 	"settings": {},          # backfilled from DEFAULT_SETTINGS on load
 }
 
@@ -77,6 +78,20 @@ func record_campaign_medal(mission_index: int, medal: String) -> void:
 	if _MEDAL_RANK[medal] > _MEDAL_RANK[current]:
 		data.campaign_medals[key] = medal
 		save()
+
+# === PVE local best scores (no leaderboard backend yet — personal best only) ===
+
+func best_pve_score(window_date: String, tier: int) -> int:
+	return int(data.pve_best_scores.get(_pve_key(window_date, tier), 0))
+
+func record_pve_score(window_date: String, tier: int, score: int) -> void:
+	var key := _pve_key(window_date, tier)
+	if score > int(data.pve_best_scores.get(key, 0)):
+		data.pve_best_scores[key] = score
+		save()
+
+func _pve_key(window_date: String, tier: int) -> String:
+	return "%s|%d" % [window_date, tier]
 
 # === Settings ===
 

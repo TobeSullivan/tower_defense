@@ -82,8 +82,10 @@ func _on_keep_playing() -> void:
 	get_tree().paused = false
 
 func _on_return_home() -> void:
+	# Bowing out after Gold keeps your score (partial scores count).
 	get_tree().paused = false
-	SceneManager.goto_home()
+	var dmg: int = round_manager.total_damage_dealt if round_manager != null else 0
+	SceneManager.leave_match_to_home(dmg)
 
 func _make_label(font_size: int, color: Color) -> Label:
 	var l := Label.new()

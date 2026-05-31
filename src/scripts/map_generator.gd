@@ -25,11 +25,11 @@ const BonusZoneScript := preload("res://scripts/bonus_zone.gd")
 # Per-scale parameters (DESIGN_MODES PVE difficulty table). [min, max] ranges are
 # resolved from the seed; everyone on a given daily map gets the same roll.
 const SCALE_TABLE := {
-	1: {"supply": 10, "checkpoints": [1, 1], "zones": [1, 2], "mobs": 8,  "rounds": [10, 13]},
-	2: {"supply": 20, "checkpoints": [1, 2], "zones": [2, 3], "mobs": 12, "rounds": [13, 17]},
-	3: {"supply": 30, "checkpoints": [2, 2], "zones": [3, 4], "mobs": 16, "rounds": [17, 21]},
-	4: {"supply": 40, "checkpoints": [2, 3], "zones": [4, 5], "mobs": 20, "rounds": [21, 26]},
-	5: {"supply": 50, "checkpoints": [3, 3], "zones": [5, 6], "mobs": 24, "rounds": [26, 30]},
+	1: {"supply": 20,  "checkpoints": [1, 1], "zones": [1, 2], "mobs": 8,  "rounds": [10, 13]},
+	2: {"supply": 40,  "checkpoints": [1, 2], "zones": [2, 3], "mobs": 12, "rounds": [13, 17]},
+	3: {"supply": 60,  "checkpoints": [2, 2], "zones": [3, 4], "mobs": 16, "rounds": [17, 21]},
+	4: {"supply": 80,  "checkpoints": [2, 3], "zones": [4, 5], "mobs": 20, "rounds": [21, 26]},
+	5: {"supply": 100, "checkpoints": [3, 3], "zones": [5, 6], "mobs": 24, "rounds": [26, 30]},
 }
 
 # Path must be at least this multiple of the straight entry->exit distance, so

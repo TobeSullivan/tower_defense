@@ -4,16 +4,22 @@ extends AnimatedSprite2D
 
 const _DIE_FRAMES := 10
 
+# One SpriteFrames shared by every death burst (built once). At high kill rates
+# (one-shotting + respawns) this was allocating a fresh SpriteFrames per death.
+static var _die_frames: SpriteFrames = null
+
 func setup(world_pos: Vector2, rot: float) -> void:
 	position = world_pos
 	rotation = rot
 	scale = Vector2(0.08, 0.08)
 	z_index = 1  # above mobs so the burst reads on top
-	sprite_frames = _build_frames()
+	sprite_frames = _shared_die_frames()
 	animation_finished.connect(queue_free)
 	play("die")
 
-func _build_frames() -> SpriteFrames:
+static func _shared_die_frames() -> SpriteFrames:
+	if _die_frames != null:
+		return _die_frames
 	var frames := SpriteFrames.new()
 	frames.add_animation("die")
 	frames.set_animation_loop("die", false)
@@ -23,4 +29,5 @@ func _build_frames() -> SpriteFrames:
 		frames.add_frame("die", tex)
 	if frames.has_animation("default"):
 		frames.remove_animation("default")
-	return frames
+	_die_frames = frames
+	return _die_frames

@@ -14,10 +14,14 @@ var hp: float = GameConstants.MOB_BASE_HP
 
 var anim: AnimatedSprite2D
 
+# One SpriteFrames shared by every mob (built once). Rebuilding it per spawn was
+# needless allocation churn — brutal at high spawn/respawn rates.
+static var _walk_frames: SpriteFrames = null
+
 func _ready() -> void:
 	hp = max_hp
 	anim = AnimatedSprite2D.new()
-	anim.sprite_frames = _build_frames()
+	anim.sprite_frames = _shared_walk_frames()
 	anim.scale = Vector2(0.08, 0.08)
 	add_child(anim)
 	anim.play("walk")
@@ -26,7 +30,9 @@ func _ready() -> void:
 		position = path[0]
 		path_index = 1
 
-func _build_frames() -> SpriteFrames:
+static func _shared_walk_frames() -> SpriteFrames:
+	if _walk_frames != null:
+		return _walk_frames
 	var frames := SpriteFrames.new()
 	frames.add_animation("walk")
 	frames.set_animation_loop("walk", true)
@@ -36,7 +42,8 @@ func _build_frames() -> SpriteFrames:
 		frames.add_frame("walk", tex)
 	if frames.has_animation("default"):
 		frames.remove_animation("default")
-	return frames
+	_walk_frames = frames
+	return _walk_frames
 
 func _physics_process(delta: float) -> void:
 	if path.size() < 2:

@@ -101,15 +101,15 @@ func _process(delta: float) -> void:
 func get_damage() -> float:
 	# DESIGN stacking: zone bonuses add together; here they also add to the tier
 	# bonus rather than multiplying it. Working assumption.
-	var mult: float = 1.0 + tiers["damage"] * GameConstants.TOWER_TIER_INCREMENT + zone_bonus["damage"] / 100.0
+	var mult: float = 1.0 + tiers["damage"] * GameConstants.TOWER_DAMAGE_INCREMENT + zone_bonus["damage"] / 100.0
 	return GameConstants.TOWER_BASE_DAMAGE * mult
 
 func get_range() -> float:
-	var mult: float = 1.0 + tiers["range"] * GameConstants.TOWER_TIER_INCREMENT + zone_bonus["range"] / 100.0
+	var mult: float = 1.0 + tiers["range"] * GameConstants.TOWER_RANGE_INCREMENT + zone_bonus["range"] / 100.0
 	return GameConstants.TOWER_BASE_RANGE * mult
 
 func get_cooldown() -> float:
-	var mult: float = 1.0 + tiers["attack_speed"] * GameConstants.TOWER_TIER_INCREMENT + zone_bonus["attack_speed"] / 100.0
+	var mult: float = 1.0 + tiers["attack_speed"] * GameConstants.TOWER_ATTACK_SPEED_INCREMENT + zone_bonus["attack_speed"] / 100.0
 	return GameConstants.TOWER_BASE_COOLDOWN / mult
 
 func get_crit_chance() -> float:

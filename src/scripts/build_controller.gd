@@ -55,6 +55,8 @@ const _NO_CELL := Vector2i(0x7fffffff, 0x7fffffff)
 var _last_ghost_cell: Vector2i = _NO_CELL
 var _last_ghost_valid: bool = false
 var _anim_time: float = 0.0
+var _redraw_accum: float = 0.0
+const REDRAW_INTERVAL := 1.0 / 30.0  # overlay repaint cadence (seconds)
 
 func _ready() -> void:
 	# Draw path overlay under towers and mobs (which are z=0) but over background/markers.
@@ -98,7 +100,13 @@ func _build_hint_label() -> void:
 
 func _process(delta: float) -> void:
 	_anim_time += delta
-	queue_redraw()  # repaint the flowing-dash overlay every frame
+	# Throttle the flowing-dash repaint to ~30fps. Repainting every frame meant
+	# re-drawing the whole (now much longer, post-supply-bump) maze path 60×/sec,
+	# which hammered the GL-compat canvas renderer during build-mode hovering.
+	_redraw_accum += delta
+	if _redraw_accum >= REDRAW_INTERVAL:
+		_redraw_accum = 0.0
+		queue_redraw()
 
 	if not _build_mode:
 		return
@@ -322,7 +330,7 @@ func _draw_animated_dashes(pts: PackedVector2Array, color: Color, width: float) 
 				if clip_e > clip_s:
 					var p1: Vector2 = a + dir * (clip_s - seg_start_g)
 					var p2: Vector2 = a + dir * (clip_e - seg_start_g)
-					draw_line(p1, p2, color, width, true)
+					draw_line(p1, p2, color, width)  # no AA — AA polylines are heavy in GL compat
 			k += 1
 		cumulative = seg_end_g
 

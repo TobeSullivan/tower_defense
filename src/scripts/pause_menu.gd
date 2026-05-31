@@ -183,11 +183,15 @@ func _on_restart() -> void:
 		func(): SceneManager.restart_current_match())
 
 func _on_quit() -> void:
-	_ask_confirm(_quit_message(), func(): SceneManager.goto_home())
+	_ask_confirm(_quit_message(), func(): SceneManager.leave_match_to_home(_current_damage()))
+
+func _current_damage() -> int:
+	return round_manager.total_damage_dealt if round_manager != null else 0
 
 func _quit_message() -> String:
 	if not is_multiplayer:
-		return "Quit to the main menu? Your progress will be lost."
+		# Single-player (campaign / solo PVE): the result so far is recorded on quit.
+		return "Quit to the main menu? Your score so far is saved."
 	if _is_pvp():
 		return "Quit the match? You will be eliminated and your lives will leave the pool."
 	return "Quit the match? Your score will not be posted."

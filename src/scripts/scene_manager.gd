@@ -10,6 +10,7 @@ const MapResourceScript := preload("res://resources/map_resource.gd")
 
 const HOME_SCENE := "res://scenes/home_screen.tscn"
 const CAMPAIGN_SELECT_SCENE := "res://scenes/campaign_select.tscn"
+const PVE_SELECT_SCENE := "res://scenes/pve_select.tscn"
 const MATCH_SCENE := "res://scenes/prototype.tscn"
 
 # Authored campaign missions, by mission index. Missions 2–10 are not authored
@@ -36,6 +37,18 @@ func goto_campaign_select() -> void:
 	Engine.time_scale = 1.0
 	get_tree().change_scene_to_file(CAMPAIGN_SELECT_SCENE)
 
+func goto_pve_select() -> void:
+	get_tree().paused = false
+	Engine.time_scale = 1.0
+	get_tree().change_scene_to_file(PVE_SELECT_SCENE)
+
+# Solo PVE: a generated map played for score. Single-player for pause purposes.
+func start_pve_map(map) -> void:
+	pending_map = map
+	current_is_multiplayer = false
+	get_tree().paused = false
+	get_tree().change_scene_to_file(MATCH_SCENE)
+
 func has_campaign_mission(index: int) -> bool:
 	return CAMPAIGN_MISSIONS.has(index)
 
@@ -53,10 +66,30 @@ func restart_current_match() -> void:
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
-# Called by the match-end panel when a campaign match finishes, so the medal is
-# persisted for the mission list.
-func report_match_result(damage: int, medal: String) -> void:
+# Records the result for the current map (campaign medal or PVE score). Storage is
+# best-kept, so calling this with a partial score is always safe — a partial can
+# never beat a full run. PVP records nothing (last-standing, no medals/score).
+func report_match_result(damage: int) -> void:
 	if pending_map == null:
 		return
 	if pending_map.mode == MapResourceScript.Mode.CAMPAIGN and pending_map.mission_index > 0:
-		SaveData.record_campaign_medal(pending_map.mission_index, medal)
+		SaveData.record_campaign_medal(pending_map.mission_index, _medal_for(damage))
+	elif pending_map.mode == MapResourceScript.Mode.PVE:
+		SaveData.record_pve_score(pending_map.window_date, pending_map.scale_tier, damage)
+
+func _medal_for(damage: int) -> String:
+	if pending_map == null:
+		return "none"
+	if damage >= pending_map.gold_threshold:
+		return "gold"
+	if damage >= pending_map.silver_threshold:
+		return "silver"
+	if damage >= pending_map.bronze_threshold:
+		return "bronze"
+	return "none"
+
+# Bow out mid-match: record the (possibly partial) result, then go home. Used by
+# the gold-reached popup and the pause-menu quit. Partial scores count by design.
+func leave_match_to_home(damage: int) -> void:
+	report_match_result(damage)
+	goto_home()
