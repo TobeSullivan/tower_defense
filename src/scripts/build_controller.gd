@@ -250,6 +250,17 @@ func _is_valid_placement(cell: Vector2i) -> bool:
 	var trial_path := PathfinderScript.compute_full_path(entry_cell, checkpoint_cells, exit_cell, trial)
 	return not trial_path.is_empty()
 
+# Bot/remote driver entry: validate, pay, and place a tower at `cell`. Goes through
+# the same checks as the human input path. Returns true on success.
+func bot_place_tower(cell: Vector2i) -> bool:
+	if not _is_valid_placement(cell):
+		return false
+	if round_manager == null or not round_manager.can_afford(GameConstants.TOWER_COST):
+		return false
+	round_manager.spend(GameConstants.TOWER_COST)
+	_place_tower(cell)
+	return true
+
 func _place_tower(cell: Vector2i) -> void:
 	var tower := TowerScript.new()
 	tower.grid_cell = cell

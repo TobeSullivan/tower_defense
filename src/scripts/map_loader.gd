@@ -25,6 +25,7 @@ const WinPanelScript := preload("res://scripts/win_panel.gd")
 const RoundToastScript := preload("res://scripts/round_toast.gd")
 const PauseMenuScript := preload("res://scripts/pause_menu.gd")
 const ArenaViewScript := preload("res://scripts/arena_view.gd")
+const BotControllerScript := preload("res://scripts/bot_controller.gd")
 const ObstacleScript := preload("res://scripts/obstacle.gd")
 const ZoneDefinitionScript := preload("res://resources/zone_definition.gd")
 
@@ -124,6 +125,16 @@ static func _build_board(container: Node2D, map, coordinator, is_local: bool):
 	container.add_child(spawner)
 	container.add_child(board)
 	container.add_child(ctrl)
+
+	# Non-local boards are played by a bot (solves cold-start; real netcode swaps
+	# this for a remote driver later).
+	if not is_local:
+		var bot := BotControllerScript.new()
+		bot.board = board
+		bot.ctrl = ctrl
+		bot.coordinator = coordinator
+		container.add_child(bot)
+
 	return board
 
 static func _build_match_ui(host: Node2D, local_board, local_ctrl) -> void:
