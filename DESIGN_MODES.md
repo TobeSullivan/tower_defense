@@ -29,6 +29,25 @@ No expansion unless players demand it after launch. Do not get lost building cam
 
 Each mission has a per-mission leaderboard (total damage dealt). Bronze/Silver/Gold thresholds exist to give players a concrete target and feed season pass milestones. Gold should be achievable by a reasonably engaged player — the leaderboard is where real competition lives, not the threshold.
 
+### Mission curriculum (locked 2026-05-31)
+
+Mission 1 is the forgiving big-sandbox intro that exposes everything at once. Each later mission **isolates one decision** on a rising curve; mission 10 integrates all of it as a bridge into PVE Scale 5. Difficulty climbs mainly via round count (mob HP scales ×1.12/round after round 5) and mob count, with supply deliberately *tightened* on the missions whose lesson is investment efficiency. Crit and multishot are taught through the upgrade stats (there are no crit/multishot bonus zones — only DAMAGE/ATTACK_SPEED/RANGE/SLOW exist).
+
+| # | Name | Teaches (the one decision) | Grid | CP | Zones | Obst. | Supply | Rounds | Mobs |
+|---|------|------|------|----|-------|------|--------|--------|------|
+| 1 | First Contact | Basics — maze, upgrade, use zones | 40×22 | 3 | 4 | 8 | 100 | 10 | 8 |
+| 2 | The Long Way | Mazing — path length *is* damage | 26×16 | 1 | 0 | 0 | 35 | 9 | 8 |
+| 3 | Switchback | Checkpoints force the route | 30×18 | 2 | 0 | 2 | 45 | 10 | 10 |
+| 4 | Hot Spots | Tower-buff zones + color synergy | 32×18 | 2 | 3 (dmg/atk/rng) | 3 | 50 | 11 | 12 |
+| 5 | Cold Feet | Slow zones — time-on-tower as a weapon | 34×20 | 2 | 3 (2 slow + dmg) | 4 | 60 | 12 | 14 |
+| 6 | Sharp Shooters | Crit upgrades — go *tall*, not wide | 30×18 | 2 | 2 (dmg/atk) | 4 | 40 (tight) | 12 | 12 |
+| 7 | Spread the Love | Multishot — punish a bunched train | 34×20 | 3 | 2 (atk/rng) | 4 | 60 | 13 | 16 |
+| 8 | Tight Quarters | Maze around heavy obstacles, low supply | 32×20 | 2 | 2 | 12 | 45 (tight) | 13 | 14 |
+| 9 | Compound Interest | Economy — save vs. spend, interest cap | 36×20 | 2 | 3 | 5 | 80 | 16 | 16 |
+| 10 | The Gauntlet | Capstone — everything, incl. zone stacking | 40×22 | 3 | 6 (2 dmg stack + atk/rng + 2 slow) | 8 | 100 | 18 | 20 |
+
+Thresholds for 2–10 follow mission 1's approved ratio (silver ≈ 1.875 × supply × rounds; bronze ≈ ⅔ silver; gold ≈ 4⁄3 silver), rounded clean. They are **soft and uncalibrated** — same status as the PVE thresholds, to be tuned once real campaign scores come in.
+
 ---
 
 ## PVE (Leaderboard mode)

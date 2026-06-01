@@ -13,10 +13,20 @@ const CAMPAIGN_SELECT_SCENE := "res://scenes/campaign_select.tscn"
 const PVE_SELECT_SCENE := "res://scenes/pve_select.tscn"
 const MATCH_SCENE := "res://scenes/prototype.tscn"
 
-# Authored campaign missions, by mission index. Missions 2–10 are not authored
-# yet (campaign is the tutorial — content is deliberately minimal for now).
+# Authored campaign missions, by mission index. All 10 are authored — a tutorial
+# curriculum where each mission isolates one decision on a rising curve (see the
+# Campaign curriculum table in DESIGN_MODES.md).
 const CAMPAIGN_MISSIONS := {
 	1: "res://campaign/mission_01.tres",
+	2: "res://campaign/mission_02.tres",
+	3: "res://campaign/mission_03.tres",
+	4: "res://campaign/mission_04.tres",
+	5: "res://campaign/mission_05.tres",
+	6: "res://campaign/mission_06.tres",
+	7: "res://campaign/mission_07.tres",
+	8: "res://campaign/mission_08.tres",
+	9: "res://campaign/mission_09.tres",
+	10: "res://campaign/mission_10.tres",
 }
 const CAMPAIGN_MISSION_COUNT := 10  # design cap; only authored entries are playable
 

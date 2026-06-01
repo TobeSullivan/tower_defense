@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="MapResource" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://resources/zone_definition.gd" id="1_zone"]
+[ext_resource type="Script" path="res://resources/map_resource.gd" id="2_map"]
+
+[sub_resource type="Resource" id="Zone_damage"]
+script = ExtResource("1_zone")
+type = 0
+cell = Vector2i(15, 9)
+magnitude = 40
+
+[sub_resource type="Resource" id="Zone_atkspd"]
+script = ExtResource("1_zone")
+type = 1
+cell = Vector2i(20, 7)
+magnitude = 30
+
+[resource]
+script = ExtResource("2_map")
+seed = 6
+mode = 0
+grid_size = Vector2i(30, 18)
+entry_cell = Vector2i(0, 9)
+exit_cell = Vector2i(29, 9)
+checkpoint_cells = Array[Vector2i]([Vector2i(22, 3), Vector2i(8, 15)])
+obstacle_cells = Array[Vector2i]([Vector2i(12, 9), Vector2i(18, 12), Vector2i(24, 6), Vector2i(6, 13)])
+bonus_zones = [SubResource("Zone_damage"), SubResource("Zone_atkspd")]
+supply_cap = 40
+round_count = 12
+mob_count = 12
+bronze_threshold = 600
+silver_threshold = 900
+gold_threshold = 1200
+mission_index = 6
+mission_name = "Sharp Shooters"
+mission_description = "Supply is tight - you can't blanket the map. Pour upgrades into a few towers instead: crit chance and crit damage turn a handful of well-placed guns into snipers."

@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="MapResource" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://resources/zone_definition.gd" id="1_zone"]
+[ext_resource type="Script" path="res://resources/map_resource.gd" id="2_map"]
+
+[sub_resource type="Resource" id="Zone_slow_a"]
+script = ExtResource("1_zone")
+type = 3
+cell = Vector2i(17, 7)
+magnitude = 50
+
+[sub_resource type="Resource" id="Zone_slow_b"]
+script = ExtResource("1_zone")
+type = 3
+cell = Vector2i(20, 14)
+magnitude = 40
+
+[sub_resource type="Resource" id="Zone_damage"]
+script = ExtResource("1_zone")
+type = 0
+cell = Vector2i(12, 10)
+magnitude = 30
+
+[resource]
+script = ExtResource("2_map")
+seed = 5
+mode = 0
+grid_size = Vector2i(34, 20)
+entry_cell = Vector2i(0, 10)
+exit_cell = Vector2i(33, 10)
+checkpoint_cells = Array[Vector2i]([Vector2i(26, 4), Vector2i(8, 16)])
+obstacle_cells = Array[Vector2i]([Vector2i(15, 10), Vector2i(23, 9), Vector2i(10, 14), Vector2i(28, 7)])
+bonus_zones = [SubResource("Zone_slow_a"), SubResource("Zone_slow_b"), SubResource("Zone_damage")]
+supply_cap = 60
+round_count = 12
+mob_count = 14
+bronze_threshold = 900
+silver_threshold = 1350
+gold_threshold = 1800
+mission_index = 5
+mission_name = "Cold Feet"
+mission_description = "Slow zones drag the horde to a crawl. A mob stuck in the cold is a mob your towers hit again and again - maze the path straight through the slow and milk the extra time."

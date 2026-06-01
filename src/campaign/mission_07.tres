@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="MapResource" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://resources/zone_definition.gd" id="1_zone"]
+[ext_resource type="Script" path="res://resources/map_resource.gd" id="2_map"]
+
+[sub_resource type="Resource" id="Zone_atkspd"]
+script = ExtResource("1_zone")
+type = 1
+cell = Vector2i(17, 7)
+magnitude = 40
+
+[sub_resource type="Resource" id="Zone_range"]
+script = ExtResource("1_zone")
+type = 2
+cell = Vector2i(17, 13)
+magnitude = 30
+
+[resource]
+script = ExtResource("2_map")
+seed = 7
+mode = 0
+grid_size = Vector2i(34, 20)
+entry_cell = Vector2i(0, 10)
+exit_cell = Vector2i(33, 10)
+checkpoint_cells = Array[Vector2i]([Vector2i(26, 4), Vector2i(8, 10), Vector2i(26, 16)])
+obstacle_cells = Array[Vector2i]([Vector2i(20, 10), Vector2i(13, 4), Vector2i(13, 16), Vector2i(27, 10)])
+bonus_zones = [SubResource("Zone_atkspd"), SubResource("Zone_range")]
+supply_cap = 60
+round_count = 13
+mob_count = 16
+bronze_threshold = 1000
+silver_threshold = 1500
+gold_threshold = 2000
+mission_index = 7
+mission_name = "Spread the Love"
+mission_description = "Three checkpoints fold the horde into a tight, bunched train. Multishot hits every mob it can reach at once - the denser the line, the more each shot is worth. Widen the fan with range."
