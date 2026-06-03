@@ -26,6 +26,11 @@ signal towers_changed(count: int, cap: int)
 # The action rail listens to these to show/hide the docked tower inspector.
 signal tower_selected(tower)
 signal selection_cleared
+# Touch build flow: a tap parks a preview at a cell (build_pending); a second tap on
+# the same cell (or the rail's Build button) confirms. The rail shows a Build/Cancel
+# prompt from these. Mouse/desktop never uses them (it places immediately on click).
+signal build_pending(cell, cost: int, affordable: bool)
+signal build_pending_cleared
 
 # Configured by main.gd before tree entry.
 var mobs_array: Array
@@ -59,6 +64,10 @@ var _show_projected: bool = false
 const _NO_CELL := Vector2i(0x7fffffff, 0x7fffffff)
 var _last_ghost_cell: Vector2i = _NO_CELL
 var _last_ghost_valid: bool = false
+# Touch: the cell with a parked build preview (_NO_CELL = none), and whether touch
+# input is active (true → the ghost is parked, not following a cursor every frame).
+var _pending_cell: Vector2i = _NO_CELL
+var _touch_mode: bool = false
 var _anim_time: float = 0.0
 var _redraw_accum: float = 0.0
 const REDRAW_INTERVAL := 1.0 / 30.0  # overlay repaint cadence (seconds)
@@ -78,7 +87,12 @@ func _ready() -> void:
 		_ghost_range.width = 2.0
 		_ghost_range.closed = true
 		_ghost_range.visible = false
+		_ghost_range.points = _circle_points(GameConstants.TOWER_BASE_RANGE)
 		add_child(_ghost_range)
+
+		# Start in touch mode on touchscreen devices so build-mode-enter doesn't park a
+		# hover ghost at a stale cursor cell; a real mouse motion flips it back to hover.
+		_touch_mode = DisplayServer.is_touchscreen_available()
 
 		# The tower inspector now lives in the action rail (built by map_loader); the
 		# controller just emits tower_selected / selection_cleared for it to react to.
@@ -102,7 +116,9 @@ func _process(delta: float) -> void:
 		_redraw_accum = 0.0
 		queue_redraw()
 
-	if not _build_mode:
+	# Touch parks the ghost at the pending cell (set on tap); only the mouse path
+	# follows a cursor every frame.
+	if not _build_mode or _touch_mode:
 		return
 	var cell := GridScript.world_to_cell(get_global_mouse_position())
 	var world := GridScript.cell_to_world(cell)
@@ -116,7 +132,14 @@ func _process(delta: float) -> void:
 		if _last_ghost_valid:
 			_compute_projected(cell)
 
-	if _last_ghost_valid:
+	_apply_ghost_color(_last_ghost_valid)
+
+# Colour the ghost + range ring green (valid) or red (invalid) and toggle the
+# projected-path overlay. Shared by the mouse hover and the touch preview.
+func _apply_ghost_color(valid: bool) -> void:
+	if _ghost == null or _ghost_range == null:
+		return
+	if valid:
 		_ghost.modulate = Color(0.55, 1.0, 0.55, 0.6)
 		_ghost_range.default_color = Color(0.4, 1.0, 0.4, 0.6)
 		_show_projected = true
@@ -133,6 +156,13 @@ func _input(event: InputEvent) -> void:
 				return
 	# Esc is arbitrated by PauseMenu (priority stack: upgrade panel → build mode
 	# → pause menu); see is_build_mode()/is_upgrade_panel_open()/close/exit below.
+
+	# On a touch device, board taps arrive via game_view's handle_tap(). Mouse-from-
+	# touch emulation is left ON so the UI buttons work, but that means a board tap also
+	# fires a synthetic mouse click here — ignore it so the tap doesn't both preview AND
+	# place. Desktop (no touchscreen) keeps the mouse hover/click placement path below.
+	if _touch_mode:
+		return
 
 	if not (event is InputEventMouseButton and event.pressed):
 		return
@@ -178,20 +208,110 @@ func _set_build_mode(value: bool) -> void:
 	if value and not _in_build_phase():
 		return
 	_build_mode = value
+	# In touch mode the ghost is hidden until a tap parks a preview; the mouse path
+	# shows it immediately so it can follow the cursor.
+	var show_ghost: bool = value and not _touch_mode
 	if _ghost != null:
-		_ghost.visible = value
+		_ghost.visible = show_ghost
 	if _ghost_range != null:
-		_ghost_range.visible = value
+		_ghost_range.visible = show_ghost
 	_last_ghost_cell = _NO_CELL  # force a fresh validity/path compute on next hover
 	if value:
 		_ghost_range.points = _circle_points(GameConstants.TOWER_BASE_RANGE)
 		_clear_selection()  # can't inspect a tower while placing
 	else:
 		_show_projected = false
+		_clear_pending()  # drop any parked touch preview when leaving build mode
 
 # Public toggle for the action-rail Build button.
 func toggle_build_mode() -> void:
 	_set_build_mode(not _build_mode)
+
+# --- Touch input (driven by game_view, which owns the camera) ---
+
+# A confirmed tap at a world position. game_view has already gated it to the play
+# rect and converted screen→world. Splits into the cell-level state machine below so
+# a headless harness can drive _tap_cell() directly without a camera/viewport.
+func handle_tap(world_pos: Vector2) -> void:
+	if not interactive:
+		return
+	_touch_mode = true
+	_tap_cell(GridScript.world_to_cell(world_pos))
+
+func _tap_cell(cell: Vector2i) -> void:
+	# Direct, mode-less tapping (no "enter build mode" step on touch): a tower → inspect
+	# it; an empty buildable cell → preview, then a second tap on the same cell (or the
+	# rail's Build button) places it.
+	var t := _tower_at_cell(cell)
+	if t != null:
+		_clear_pending()
+		_select_tower(t)
+		return
+	if not _in_build_phase():
+		return
+	if _pending_cell != _NO_CELL and cell == _pending_cell:
+		confirm_pending_build()
+	elif _is_valid_placement(cell):
+		_clear_selection()
+		_set_pending(cell)
+	else:
+		_clear_pending()  # tapped an unbuildable empty cell — drop the preview
+
+# Build the currently-previewed tower (rail Build button or a second tap on the cell).
+func confirm_pending_build() -> void:
+	if _pending_cell == _NO_CELL or not _in_build_phase():
+		return
+	var cell := _pending_cell
+	if not _is_valid_placement(cell):
+		_clear_pending()
+		return
+	if round_manager == null or not round_manager.can_afford(GameConstants.TOWER_COST):
+		return
+	round_manager.spend(GameConstants.TOWER_COST)
+	_place_tower(cell)
+	_clear_pending()  # keep build mode armed for the next tap
+
+func cancel_pending_build() -> void:
+	_clear_pending()
+
+# Sell the tower currently shown in the inspector (replaces right-click, which touch
+# has no equivalent for). Also wired to the rail's Sell button on desktop.
+func sell_selected_tower() -> void:
+	if _selected_tower == null or not is_instance_valid(_selected_tower):
+		return
+	if not _in_build_phase():
+		return
+	_sell_tower_at_cell(_selected_tower.grid_cell)
+
+# Park the preview ghost at `cell`, colour it, and tell the rail to show Build/Cancel.
+func _set_pending(cell: Vector2i) -> void:
+	_pending_cell = cell
+	var world := GridScript.cell_to_world(cell)
+	if _ghost != null:
+		_ghost.position = world
+		_ghost.visible = true
+	if _ghost_range != null:
+		_ghost_range.position = world
+		_ghost_range.visible = true
+	var valid := _is_valid_placement(cell)
+	if valid:
+		_compute_projected(cell)
+	_apply_ghost_color(valid)
+	var afford: bool = round_manager != null and round_manager.can_afford(GameConstants.TOWER_COST)
+	emit_signal("build_pending", cell, GameConstants.TOWER_COST, valid and afford)
+	queue_redraw()
+
+func _clear_pending() -> void:
+	if _pending_cell == _NO_CELL:
+		return
+	_pending_cell = _NO_CELL
+	if _ghost != null:
+		_ghost.visible = false
+	if _ghost_range != null:
+		_ghost_range.visible = false
+	_show_projected = false
+	emit_signal("build_pending_cleared")
+	queue_redraw()
 
 # --- Tower selection (drives the action-rail inspector) ---
 

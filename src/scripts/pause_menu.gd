@@ -14,6 +14,7 @@ class_name PauseMenu
 const MapResourceScript := preload("res://resources/map_resource.gd")
 const SettingsPanelScript := preload("res://scripts/settings_panel.gd")
 const UiStyle := preload("res://scripts/ui_style.gd")
+const UiLayout := preload("res://scripts/ui_layout.gd")
 
 var build_controller  # BuildController — untyped to avoid class-name cycle
 var round_manager     # RoundManager — untyped to avoid class-name cycle
@@ -96,17 +97,18 @@ func _populate_confirm() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox.add_child(row)
 
+	var s := UiLayout.scale_factor()
 	var cancel := Button.new()
 	cancel.text = "Cancel"
-	cancel.custom_minimum_size = Vector2(140, 44)
-	cancel.add_theme_font_size_override("font_size", 16)
+	cancel.custom_minimum_size = Vector2(140, 44) * s
+	cancel.add_theme_font_size_override("font_size", int(16 * s))
 	cancel.pressed.connect(_close_confirm)
 	row.add_child(cancel)
 
 	var confirm := Button.new()
 	confirm.text = "Confirm"
-	confirm.custom_minimum_size = Vector2(140, 44)
-	confirm.add_theme_font_size_override("font_size", 16)
+	confirm.custom_minimum_size = Vector2(140, 44) * s
+	confirm.add_theme_font_size_override("font_size", int(16 * s))
 	confirm.pressed.connect(_on_confirm_yes)
 	row.add_child(confirm)
 
@@ -163,6 +165,20 @@ func _resume() -> void:
 	_menu_panel.visible = false
 	if not is_multiplayer:
 		get_tree().paused = false
+
+# Public entry for the on-screen Pause button (mobile has no Esc key). Opens the
+# menu, closes the topmost overlay if one is up, or resumes if already paused.
+func toggle_pause() -> void:
+	if _settings != null and _settings.is_open():
+		_settings.close()
+		return
+	if _confirm_panel.visible:
+		_close_confirm()
+		return
+	if _open:
+		_resume()
+	elif _can_open():
+		_open_menu()
 
 # --- Objectives (Bronze / Silver / Gold) ---
 
@@ -265,7 +281,7 @@ func _make_dim() -> ColorRect:
 
 func _make_centered_panel(min_size: Vector2) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = min_size
+	panel.custom_minimum_size = min_size * UiLayout.scale_factor()
 	# Anchor to the screen centre and grow in both directions so the panel stays
 	# truly centred as it sizes to its content. PRESET_CENTER froze the offsets
 	# from the panel's size at build time — before any children were added, so
@@ -298,9 +314,10 @@ func _panel_vbox(panel: PanelContainer) -> VBoxContainer:
 
 func _menu_button(text: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
+	var s := UiLayout.scale_factor()
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 48)
-	b.add_theme_font_size_override("font_size", 18)
+	b.custom_minimum_size = Vector2(0, 48 * s)
+	b.add_theme_font_size_override("font_size", int(18 * s))
 	b.pressed.connect(on_pressed)
 	return b
 
@@ -312,7 +329,7 @@ func _spacer(h: int) -> Control:
 func _label(text: String, font_size: int, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_font_size_override("font_size", int(font_size * UiLayout.scale_factor()))
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 3)

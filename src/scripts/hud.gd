@@ -33,7 +33,7 @@ func _ready() -> void:
 	panel.offset_left = 0.0
 	panel.offset_right = 0.0
 	panel.offset_top = 0.0
-	panel.offset_bottom = UiLayout.TOP_BAR_H
+	panel.offset_bottom = UiLayout.top_bar_h()
 	UiStyle.apply_bar(panel)
 	add_child(panel)
 
@@ -93,7 +93,7 @@ func _on_towers_changed(count: int, cap: int) -> void:
 
 func _make_label(font_size: int) -> Label:
 	var l := Label.new()
-	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_font_size_override("font_size", int(font_size * UiLayout.scale_factor()))
 	l.add_theme_color_override("font_color", Color.WHITE)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 3)

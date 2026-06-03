@@ -11,3 +11,6 @@
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Android gradle build template (machine-specific; reinstallable)
+/android/

@@ -16,11 +16,26 @@ const PLAY_MARGIN := 1.0
 # dock), so the board reserves only the rail and gets the full screen width.
 const ARENA_H := 432.0
 
+# High-DPI phones make the 1080p-designed UI illegible at 1x, so scale the whole UI
+# (fonts, bars, buttons) AND the in-match board zoom (see game_view) up on touch.
+# Desktop stays 1x. The base consts above are the 1x (desktop) values.
+static func scale_factor() -> float:
+	return 2.0 if DisplayServer.is_touchscreen_available() else 1.0
+
+static func top_bar_h() -> float:
+	return TOP_BAR_H * scale_factor()
+
+static func right_rail_w() -> float:
+	return RIGHT_RAIL_W * scale_factor()
+
+static func arena_h() -> float:
+	return ARENA_H * scale_factor()
+
 # The rectangle (in screen space) the board is allowed to occupy. Both modes reserve
 # only the right rail (is_pvp kept for callers; the layout no longer differs by it).
 static func play_rect(is_pvp: bool, vp: Vector2) -> Rect2:
-	return Rect2(0.0, TOP_BAR_H, vp.x - RIGHT_RAIL_W, vp.y - TOP_BAR_H)
+	return Rect2(0.0, top_bar_h(), vp.x - right_rail_w(), vp.y - top_bar_h())
 
 # Region inside the right rail where the PVP arena minimap is drawn (bottom strip).
 static func arena_region(vp: Vector2) -> Rect2:
-	return Rect2(vp.x - RIGHT_RAIL_W, vp.y - ARENA_H, RIGHT_RAIL_W, ARENA_H)
+	return Rect2(vp.x - right_rail_w(), vp.y - arena_h(), right_rail_w(), arena_h())

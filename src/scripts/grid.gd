@@ -1,10 +1,14 @@
 extends Node
 class_name Grid
 
-# Map dimensions in tiles. Matches DESIGN's "~30-40 wide for MP" working range.
+# Map dimensions in tiles.
+# TRIAL (2026-06-02): halved 40x22 -> 20x11 (same aspect) so the board fits a phone
+# screen at a finger-friendly size with NO zoom/scroll (BTD6-style: design for the
+# smallest screen, PC scales up). Generated PVE/PVP maps use these; authored campaign
+# .tres still bake 40x22. Revert to 40/22 to undo the trial.
 const TILE_SIZE := 48
-const COLS := 40
-const ROWS := 22  # Total play area: 1920 x 1056 (24px slack at bottom of 1080)
+const COLS := 20
+const ROWS := 11  # Trial half-size board: 960 x 528 world px
 
 const ORIGIN := Vector2.ZERO  # top-left of grid in world coordinates
 

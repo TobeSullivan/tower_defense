@@ -88,6 +88,7 @@ static func build_match(host: Node2D, map, num_boards: int = 1) -> Array:
 	game_view.grid_size = map.grid_size
 	game_view.local_index = 0
 	game_view.is_pvp = coordinator.is_pvp
+	game_view.local_build_controller = boards[0].build_controller  # touch tap dispatch
 	host.add_child(game_view)
 
 	# Arena minimap only for multi-board matches (PVP).
@@ -183,6 +184,7 @@ static func _build_match_ui(host: Node2D, local_board, local_ctrl) -> void:
 	var pause_menu := PauseMenuScript.new()
 	pause_menu.build_controller = local_ctrl
 	pause_menu.round_manager = local_board
+	rail.pause_menu = pause_menu  # the rail's on-screen Pause button drives the menu
 
 	host.add_child(hud)
 	host.add_child(rail)

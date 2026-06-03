@@ -3,8 +3,19 @@ art/
 
 # Dev artifacts (video frame extracts, screenshots, etc.)
 notes/video_frames/
+notes/screenshots/
+
+# Claude Code local state (plans, local settings, locks)
+.claude/
 
 # OS junk
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Android build artifacts
+*.apk
+*.apk.idsig
+*.aab
+*.pck
+mbtd_probe*
