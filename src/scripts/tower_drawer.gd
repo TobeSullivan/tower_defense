@@ -26,7 +26,7 @@ var _sub_lab: Label
 var _stat_val: Dictionary = {}
 var _stat_btn: Dictionary = {}
 var _stat_cost: Dictionary = {}
-var _stat_coin: Dictionary = {}
+var _dmg_lab: Label
 
 var _selected
 var _open: bool = false
@@ -45,6 +45,11 @@ func _ready() -> void:
 
 func is_open() -> bool:
 	return _open
+
+func _process(_delta: float) -> void:
+	# Total damage climbs during the run phase; refresh just that field live while open.
+	if _open and is_instance_valid(_selected):
+		_update_damage()
 
 func covers(pos: Vector2) -> bool:
 	return _open and _panel != null and _panel.get_global_rect().has_point(pos)
@@ -130,10 +135,7 @@ func _build_ui() -> void:
 		val.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_stat_val[stat] = val
 		row.add_child(val)
-		# cost: coin icon + amount (shown on every row; "MAX" replaces it when maxed)
-		var coin := UiStyle.icon_rect("coin", int(15 * s))
-		_stat_coin[stat] = coin
-		row.add_child(coin)
+		# cost: amount only (no coin icon); "MAX" replaces it when maxed
 		var cost := Label.new()
 		cost.add_theme_font_size_override("font_size", int(13 * s))
 		cost.add_theme_color_override("font_color", Color("ffe98c"))
@@ -151,6 +153,31 @@ func _build_ui() -> void:
 		_stat_btn[stat] = up
 		row.add_child(up)
 		v.add_child(rowpanel)
+
+	# Total damage dealt this match (live). Restored — the UI rebuild dropped it.
+	var dmgpanel := PanelContainer.new()
+	dmgpanel.add_theme_stylebox_override("panel", UiStyle.stat_box())
+	var dm := MarginContainer.new()
+	dm.add_theme_constant_override("margin_left", int(8 * s))
+	dm.add_theme_constant_override("margin_right", int(8 * s))
+	dm.add_theme_constant_override("margin_top", int(6 * s))
+	dm.add_theme_constant_override("margin_bottom", int(6 * s))
+	dmgpanel.add_child(dm)
+	var drow := HBoxContainer.new()
+	drow.add_theme_constant_override("separation", int(6 * s))
+	dm.add_child(drow)
+	var dlab := Label.new()
+	dlab.text = "Total damage"
+	dlab.add_theme_font_size_override("font_size", int(13 * s))
+	dlab.add_theme_color_override("font_color", Color("dfe6d6"))
+	dlab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	drow.add_child(dlab)
+	_dmg_lab = Label.new()
+	_dmg_lab.text = "0"
+	_dmg_lab.add_theme_font_size_override("font_size", int(13 * s))
+	_dmg_lab.add_theme_color_override("font_color", Color("ffd27a"))
+	drow.add_child(_dmg_lab)
+	v.add_child(dmgpanel)
 
 	# Sell
 	var sell := Button.new()
@@ -242,21 +269,31 @@ func _refresh() -> void:
 		var b: Button = _stat_btn[stat]
 		var cost: int = _selected.upgrade_cost(stat)
 		var cost_lab: Label = _stat_cost[stat]
-		var coin: TextureRect = _stat_coin[stat]
 		if cost <= 0:
 			cost_lab.text = "MAX"
 			cost_lab.add_theme_color_override("font_color", Color("9fb088"))
-			coin.visible = false
 			b.disabled = true
 			b.visible = false
 		else:
-			coin.visible = true
 			b.visible = true
 			cost_lab.text = str(cost)
 			var afford: bool = in_build and gold >= cost
 			cost_lab.add_theme_color_override("font_color", Color("ffe98c") if afford else Color(1, 0.92, 0.55, 0.4))
-			coin.modulate = Color.WHITE if afford else Color(1, 1, 1, 0.4)
 			b.disabled = not afford
+	_update_damage()
+
+func _update_damage() -> void:
+	if _dmg_lab == null or not is_instance_valid(_selected):
+		return
+	_dmg_lab.text = "%s  ·  %d kills" % [_fmt_num(_selected.damage_done), _selected.kills]
+
+static func _fmt_num(v: float) -> String:
+	var n := int(round(v))
+	if n >= 1000000:
+		return "%.1fM" % (n / 1000000.0)
+	if n >= 1000:
+		return "%.1fk" % (n / 1000.0)
+	return str(n)
 
 func _effective_value(stat: String) -> String:
 	var t = _selected

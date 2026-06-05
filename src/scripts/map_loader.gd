@@ -287,13 +287,33 @@ static func _setup_zones(parent: Node2D, zone_defs: Array) -> Array:
 
 static func _setup_markers(parent: Node2D, checkpoint_cells: Array) -> void:
 	# Entry and exit are off-screen (mobs spawn/despawn beyond the map edge), so
-	# only checkpoint markers are drawn.
-	for cell in checkpoint_cells:
+	# only checkpoint markers are drawn. Each flag is numbered with its visit order.
+	var flag_h := CHECKPOINT_TEX.get_height() * 0.42
+	for i in range(checkpoint_cells.size()):
+		var cell = checkpoint_cells[i]
+		var base := GridScript.cell_to_world(cell)
 		var marker := Sprite2D.new()
 		marker.texture = CHECKPOINT_TEX
-		marker.position = GridScript.cell_to_world(cell)
+		marker.position = base
 		marker.scale = Vector2(0.42, 0.42)
 		# Flag is tall (pole) — anchor its BASE at the cell centre, not its middle.
 		marker.offset = Vector2(0, -CHECKPOINT_TEX.get_height() * 0.5)
 		marker.z_index = 3  # above the road so the flag reads on top of the path
 		parent.add_child(marker)
+
+		# Visit-order number, centred on the flag's banner. The banner centroid sits on the
+		# pole (horizontally centred) at ~55.8% of the flag height above the cell — measured
+		# from level_marker_flag.png. A square label box with centre alignment keeps the
+		# digit centred on that point regardless of font size.
+		var banner_cy := 0.558 * flag_h
+		var box := 26.0
+		var num := Label.new()
+		num.text = str(i + 1)
+		num.add_theme_font_size_override("font_size", 15)
+		num.add_theme_color_override("font_color", Color.WHITE)
+		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		num.custom_minimum_size = Vector2(box, box)
+		num.z_index = 4  # above the flag sprite
+		num.position = base + Vector2(-box * 0.5, -banner_cy - box * 0.5)
+		parent.add_child(num)
