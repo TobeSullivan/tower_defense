@@ -1,38 +1,47 @@
-# Leaderboards — design note (to be planned in a dedicated session)
+# Leaderboards — design note
 
-Captured 2026-05-30. This is a parked decision, not yet implemented.
+Rewritten 2026-06-05. Supersedes the old "with-bots / without-bots" matrix, which is
+**dead**: ranked has **no bots, ever** (locked 2026-06-02), so the bot/no-bot split no
+longer exists.
 
-## Requirement
+## Backend
 
-We want **separate leaderboards per lobby format**, and within each grouped
-format, **split by whether bots were allowed**:
+**Nakama handles this.** It ships leaderboards + tournaments (seasonal, auto-reset,
+history-preserving) as first-class features. We are not building a ranking service — we
+define board IDs, write a score on match-end, and configure season rollover as Nakama
+tournaments. Self-hosted on the same box.
 
-| Format | With bots | Without bots |
-|--------|:---------:|:------------:|
-| Solo (1) | ✅ board | ✅ board |
-| Duo (2)  | ✅ board | ✅ board |
-| Trio (3) | ✅ board | ✅ board |
-| Quad (4) | ✅ board | ✅ board |
-| Full lobby (8) | — | ✅ board (all humans, **no groups**, **no bots**) |
+### Board set
+- **Campaign:** 10 boards, one per mission. Metric = total damage. **All-time, not
+  seasonal** (it's a tutorial; resetting it is pointless).
+- **PVE:** split by `(map, window, group size)`. Combined damage isn't comparable across
+  group sizes, so solo / duo / trio / quad get **separate boards**. Empty boards cost
+  nothing at beta scale. Metric = total damage.
+- **PVP:** one **season rank ladder** (LP-based), not a damage board. This is "the season
+  leaderboard."
 
-That's **9 leaderboards total**: 4 grouped formats × {with-bots, without-bots} = 8,
-plus the single all-8 humans-only board.
+### Group scoring (PVE)
+Recommendation: rank groups **per-team** (the group's combined score vs other groups of the
+same size), since PVE co-op is a shared effort. Per-player is the alternative — **still open**.
 
-### Key points
-- The all-8 board is humans-only by definition — no bot variant, and "no groups"
-  (it's the pure free-for-all ranked format).
-- "With bots" vs "without bots" must be tracked per match so scores route to the
-  correct board.
-- Solo here means single-player ranked score (total damage). The grouped formats
-  (Duo/Trio/Quad) imply team/party play — scoring model for groups still TBD.
+## Frontend — leaderboards are contextual, not a destination
 
-## Open questions to resolve when planning
-- What score metric ranks each board? (SP = total damage. Group formats = ?)
-- For grouped formats, is the leaderboard per-player or per-team?
-- Does bot difficulty factor into "with bots" boards, or is any-bot enough to
-  segregate?
-- Seasonality / resets?
-- How this interacts with the DESIGN ranked vs private lobby split (ranked = always
-  8, no invites; private = 1–8 with optional bots).
+Decided 2026-06-05. Leaderboards are **not** a home-screen hero (the home hierarchy is
+locked: PVE/PVP heroes, Campaign tertiary, season ambient). At most a tucked-away tertiary
+entry beside Settings for browsing. Primary surfacing:
 
-> Plan this in its own chat before building.
+- **PVE select = the home.** That screen already shows the 5 maps + your best score and has
+  daily/weekly/monthly tabs. Tap a map → its board for the selected window.
+- **Post-match = the highest-value surface.** On run end: "You placed #14 this week" + the
+  rows around you + "View full board." Cheap, big retention lever.
+- **PVP ladder** behind the PVP area ("Ranked" view) and, more importantly, post-match as
+  LP delta + ladder position.
+- **Campaign** board reachable from the mission card and post-match.
+
+## Open
+- Group scoring: per-team (recommended) vs per-player — confirm.
+- Exact board-id schema / Nakama tournament config.
+- PVE window cadence: for a small pool, foreground **weekly/monthly** over daily (a daily
+  board barely populates before it resets). Daily becomes a bonus sprint. (Recommendation,
+  not yet locked.)
+- PVP season specifics (decay, LP→reward) — see season pass + a future PVP-season note.
