@@ -508,18 +508,22 @@ func _refresh_road_preview() -> void:
 func current_path_world() -> PackedVector2Array:
 	return _extend_offscreen(_current_path)
 
-# Prepend/append off-screen lead-in/out that runs straight off the LEFT (entry) and
-# RIGHT (exit) edges at the endpoint's row — so the path/road never forces a vertical
-# stub even if the maze makes the first/last in-grid move vertical.
+# Prepend/append a straight lead-in/out to the LEFT (entry) and RIGHT (exit) BOARD EDGES
+# at the endpoint's row — so the road and mobs run cleanly to the board boundary and stop
+# THERE (bounded layout: nothing spills into the dark surround), while still avoiding a
+# vertical stub if the maze's first/last in-grid move is vertical. Mobs spawn/despawn at
+# the edge instead of off-screen (the old OFFSCREEN_PAD lead is gone — it bled past the
+# bounded board).
 func _extend_offscreen(p: PackedVector2Array) -> PackedVector2Array:
 	if p.size() < 2:
 		return p
 	var first: Vector2 = p[0]
 	var last: Vector2 = p[p.size() - 1]
+	var board_w: float = float(grid_size.x * GridScript.TILE_SIZE)
 	var out := PackedVector2Array()
-	out.append(Vector2(first.x - OFFSCREEN_PAD, first.y))
+	out.append(Vector2(0.0, first.y))      # left board edge
 	out.append_array(p)
-	out.append(Vector2(last.x + OFFSCREEN_PAD, last.y))
+	out.append(Vector2(board_w, last.y))   # right board edge
 	return out
 
 func _compute_projected(cell: Vector2i) -> void:

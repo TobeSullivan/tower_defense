@@ -118,6 +118,11 @@ func focus_board(i: int) -> void:
 	if i >= 0 and i < board_containers.size():
 		_focus(i)
 
+# Re-fit the current board into the (possibly changed) play rect — e.g. after the
+# inspector dock is collapsed/expanded, which changes how much width the board gets.
+func refit() -> void:
+	_focus(_spectate_index)
+
 func current_index() -> int:
 	return _spectate_index
 

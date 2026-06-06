@@ -23,8 +23,9 @@ class_name RoadRenderer
 ## --- INTEGRATION ---
 ## map_loader: add the node, road.configure(TILE_SIZE), road.z_index below towers/mobs;
 ## build_controller.recompute_path() feeds set_path(world_points); the build-phase hover
-## feeds set_preview(projected)/clear_preview(). The road auto-extends one cell past entry
-## and exit (see _with_stubs) so it runs under the entry/exit markers to the screen edge.
+## feeds set_preview(projected)/clear_preview(). The fed path already runs to the board
+## edges (build_controller._extend_offscreen), so the road meets the edge and stops there —
+## no off-board stub (bounded layout: nothing spills into the surround).
 
 # ---- style (sampled from summer_grass_path + the approved mockup) ----
 @export var road_color: Color = Color("c9a93f")
@@ -148,7 +149,9 @@ func _scale_marker(m: Node2D) -> void:
 
 ## The committed mob route. points = world-space path through cell CENTRES, in travel order.
 func set_path(points: PackedVector2Array) -> void:
-	_committed = _with_stubs(points)
+	# Points already run to the board edge (build_controller._extend_offscreen) — no stub
+	# extension, or the road would spill one cell into the dark surround (bounded layout).
+	_committed = points
 	_l_outline.points = _committed
 	_l_fill.points = _committed
 	_l_top.points = _committed
@@ -159,7 +162,7 @@ func set_path(points: PackedVector2Array) -> void:
 ## Build-phase hover: the route the maze WOULD take if a tower were placed at the
 ## hovered cell. Pass the projected path the pathfinder already computes on hover.
 func set_preview(points: PackedVector2Array) -> void:
-	_preview = _with_stubs(points)
+	_preview = points
 	_p_outline.points = _preview
 	_p_fill.points = _preview
 	_show_preview(true)
@@ -239,15 +242,6 @@ func _show_preview(on: bool) -> void:
 
 ## Extend the road one cell past the entry and exit so it runs off the board edge
 ## (under the entry marker / exit flag) instead of stopping dead at a cell centre.
-func _with_stubs(pts: PackedVector2Array) -> PackedVector2Array:
-	if pts.size() < 2:
-		return pts
-	var out := PackedVector2Array()
-	out.append(pts[0] + (pts[0] - pts[1]).normalized() * _cell)
-	out.append_array(pts)
-	out.append(pts[pts.size() - 1] + (pts[pts.size() - 1] - pts[pts.size() - 2]).normalized() * _cell)
-	return out
-
 ## Convenience: convert an array of Vector2i grid cells to world-space centres.
 static func cells_to_world(cells: Array, cell_size: float, origin: Vector2 = Vector2.ZERO) -> PackedVector2Array:
 	var out := PackedVector2Array()

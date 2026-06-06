@@ -89,6 +89,11 @@ static func build_match(host: Node2D, map, num_boards: int = 1, local_index: int
 	if local_index < 0:
 		return boards
 
+	# Recessed dark surround behind everything (v3 bounded layout): the board is a bright
+	# bordered arena floating in this. Screen-space (own CanvasLayer), so it never scales
+	# with the board's camera.
+	_setup_surround(host)
+
 	# On-screen UI is bound to the LOCAL player's board (their seat).
 	var local_board = boards[local_index]
 	var local_ctrl = local_board.build_controller
@@ -114,6 +119,7 @@ static func build_match(host: Node2D, map, num_boards: int = 1, local_index: int
 	game_view.local_build_controller = local_ctrl  # touch tap dispatch
 	game_view.tower_drawer = drawer  # so taps over the open drawer don't poke the board
 	local_ctrl.tower_drawer = drawer  # same guard for the mouse path
+	drawer.game_view = game_view  # so collapsing the dock can re-fit the board camera
 	host.add_child(game_view)
 
 	# Arena leaderboard only for multi-board matches (PVP). It floats over the board's
@@ -256,18 +262,33 @@ static func _build_match_ui(host: Node2D, local_board, local_ctrl) -> Array:
 	host.add_child(pause_menu)
 	return [strip, drawer]
 
-# Full-bleed battlefield (mockup): one toned-down grass fills the screen (no black
-# void, no bright/dark split), with a faint cell grid over the play area marking the
-# buildable cells. Grass is dimmed/desaturated so the road and towers pop.
+# Bounded board (v3 mockup): a BRIGHT, BORDERED grass arena sized exactly to the play
+# grid — no bleed. It sits in the dark recessed surround (see _setup_surround), so the
+# playfield is unmistakable and nothing buildable can sit under the UI. A faint cell grid
+# marks the buildable cells; it covers exactly the board.
+const BOARD_BORDER := 6  # world px of grass-edge frame around the board
 static func _setup_background(parent: Node2D, grid_size: Vector2i) -> void:
 	var tile := GridScript.TILE_SIZE
-	var pad := 18  # tiles of grass bleed each side — covers any screen aspect, never black
+	var board := Vector2(grid_size.x * tile, grid_size.y * tile)
+
+	# Edge frame: a darker grass-edge rect just behind the grass, peeking BOARD_BORDER px.
+	var edge := ColorRect.new()
+	edge.color = Color("3c6e26")  # --grass-edge
+	edge.position = Vector2(-BOARD_BORDER, -BOARD_BORDER)
+	edge.size = board + Vector2(BOARD_BORDER * 2, BOARD_BORDER * 2)
+	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	edge.z_index = -101
+	parent.add_child(edge)
+
+	# Bright grass fill, exactly board-sized (tiled). Brighter than the old full-bleed
+	# value so the board reads as a lit arena against the dark surround.
 	var grass := TextureRect.new()
 	grass.texture = GRASS_TEX
 	grass.stretch_mode = TextureRect.STRETCH_TILE
-	grass.size = Vector2((grid_size.x + pad * 2) * tile, (grid_size.y + pad * 2) * tile)
-	grass.position = Vector2(-pad * tile, -pad * tile)
-	grass.modulate = Color(0.72, 0.80, 0.62)  # mockup: saturate .62 / brightness .80, road pops
+	grass.size = board
+	grass.position = Vector2.ZERO
+	grass.modulate = Color(0.88, 0.97, 0.74)
+	grass.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grass.z_index = -100
 	parent.add_child(grass)
 
@@ -277,6 +298,32 @@ static func _setup_background(parent: Node2D, grid_size: Vector2i) -> void:
 	grid.cell = float(tile)
 	grid.z_index = -90  # above grass, below the road (-50)
 	parent.add_child(grid)
+
+# Screen-space recessed surround: a dark radial-gradient backdrop on its own CanvasLayer
+# behind the world, so it fills the whole viewport and never moves with the board camera.
+static func _setup_surround(host: Node) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = -100  # behind the world (default layer 0)
+	host.add_child(layer)
+	var bg := TextureRect.new()
+	bg.texture = _surround_tex()
+	bg.stretch_mode = TextureRect.STRETCH_SCALE
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(bg)
+
+static func _surround_tex() -> GradientTexture2D:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 1.0])
+	g.colors = PackedColorArray([Color("26301a"), Color("1d2614")])  # --surround → --surround-2
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = Vector2(0.5, 0.42)
+	t.fill_to = Vector2(1.05, 1.05)
+	t.width = 256
+	t.height = 256
+	return t
 
 static func _setup_obstacles(parent: Node2D, map) -> Dictionary:
 	# Each prop blocks its footprint rect (seeds the build controller's pathfinding/

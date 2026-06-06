@@ -31,8 +31,10 @@ system still undesigned) · **UNTOUCHED** (never actually discussed) · **BLOCKE
 - **Steelman B** (single-tower mazing is a PILLAR; randomness lives in points/zones/supply) → LOCKED. Not to be re-litigated.
 - **Ranked PVP is a real shipping ambition** (not just friends-testing) → confirmed; anti-cheat + queue population are on the launch critical path.
 
-## Near (in progress)
-- **Board final tile count** — direction is ~23×14 (~+50%, ~66px tiles); **pending your tile-feel check** of `inmatch_board_fullsize_1920.html`. Lever if cramped = *fewer* cells (e.g. 21×13 ≈72px), never bigger+denser. Reverses the 20×11 mobile shrink; campaign `.tres` re-rescale follows.
+## Resolved 2026-06-06
+- **Board final tile count → 25×14. LOCKED + IMPLEMENTED.** Feel-check passed at 23×14, then widened 1 tile each side (→25) so the board fills more of the frame. `Grid.COLS/ROWS` + `MapResource` default bumped; all 10 campaign `.tres` rescaled from the 20×11 originals (`src/tools/rescale_campaign.gd`, run 20→25) + thresholds path-scaled; generated PVE/PVP maps auto-grow. **Iconography note:** use the existing committed UI assets as-is — do NOT chase the mockup's placeholder glyphs.
+- **In-match UI rebuild → DONE (v3 bounded layout).** Reversed the full-bleed `play_rect`: reserved top bar + bottom strip + a permanent right inspector dock; recessed dark surround + bright bordered board (`map_loader`); floating tower-drawer → docked content-height inspector (`tower_drawer`); board floats clear of the bars with balanced top/bottom gaps; path/road clamped to the board edge (no off-board spill); drop shadows halved. **Victory screen → redesigned** (stars + "You won!", comma score, tier strip with ✓). Remaining UI polish (minor, user's call): inspector dark-on-dark when empty; road rounded end-cap slight overhang.
+- **Soft-caps revisit trigger note:** the board-rescale lever fired (now 25×14, more match gold output) — economy/supply re-tune is still deferred (BLOCKED-DATA) but CC should check the live log against the new board before any cost bend.
 
 ## Direction set — system still undesigned
 - **Anti-cheat** — tiered: PVE trusts client; ranked uses authoritative deterministic re-sim (server re-derives true kills from seed+build inputs). Real work, on critical path. Design in its own session. See `notes/server_decision.md`.

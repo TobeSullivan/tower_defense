@@ -1,10 +1,13 @@
 extends CanvasLayer
 class_name TowerDrawer
 
-# Floating tower dock (mockup #dock) — top-right, collapsible, overlaid on the
-# battlefield. Shows the selected tower's stats with green upgrade buttons, a red Sell,
-# and a Supply footer. Slides in on tower_selected, out on selection_cleared / hide.
-# Untyped refs avoid the class-name cycle pitfall.
+# Tower inspector — a PERMANENT panel docked in the reserved right zone (v3 bounded
+# layout). Shows the selected tower's stats with green upgrade buttons, a red Sell, and a
+# live total-damage line; when nothing is selected it shows a muted placeholder. The
+# "‹ hide" header button collapses the dock to a thin tab, which hands its reserved width
+# back to the board (play_rect reads UiLayout._inspector_hidden and game_view re-fits).
+# Class name kept as TowerDrawer for back-compat with existing references. Untyped refs
+# avoid the class-name cycle pitfall.
 
 const UiLayout := preload("res://scripts/ui_layout.gd")
 const UiStyle := preload("res://scripts/ui_style.gd")
@@ -19,8 +22,12 @@ const TILE_PX := 48.0
 
 var round_manager       # RoundManager
 var build_controller    # BuildController
+var game_view           # GameView — collapsing the dock asks it to re-fit the board
 
 var _panel: PanelContainer
+var _content: VBoxContainer   # name + stats + sell (hidden when nothing selected)
+var _placeholder: Label       # shown when nothing is selected
+var _show_tab: Button         # thin re-open tab shown while the dock is collapsed
 var _name_lab: Label
 var _sub_lab: Label
 var _stat_val: Dictionary = {}
@@ -29,12 +36,16 @@ var _stat_cost: Dictionary = {}
 var _dmg_lab: Label
 
 var _selected
-var _open: bool = false
-var _tween: Tween
+var _hidden: bool = false
 
 func _ready() -> void:
 	layer = 9
+	UiLayout.set_inspector_hidden(false)  # every match starts with the dock shown
 	_build_ui()
+	_show_placeholder()
+	_relayout()
+	_relayout.call_deferred()  # re-snap once container min sizes have settled
+	get_viewport().size_changed.connect(_relayout)
 	if build_controller != null:
 		build_controller.tower_selected.connect(_on_tower_selected)
 		build_controller.selection_cleared.connect(_on_selection_cleared)
@@ -43,16 +54,19 @@ func _ready() -> void:
 		round_manager.gold_changed.connect(func(_g): _refresh())
 		round_manager.phase_changed.connect(func(_p): _refresh())
 
-func is_open() -> bool:
-	return _open
-
 func _process(_delta: float) -> void:
-	# Total damage climbs during the run phase; refresh just that field live while open.
-	if _open and is_instance_valid(_selected):
+	# Total damage climbs during the run; refresh just that field live while a tower shows.
+	if not _hidden and is_instance_valid(_selected) and _content.visible:
 		_update_damage()
 
+# A tap is "over" the inspector if it lands on the docked panel or the collapsed tab —
+# the click gate skips the board there (belt-and-braces; the dock is outside play_rect).
 func covers(pos: Vector2) -> bool:
-	return _open and _panel != null and _panel.get_global_rect().has_point(pos)
+	if _panel != null and _panel.visible and _panel.get_global_rect().has_point(pos):
+		return true
+	if _show_tab != null and _show_tab.visible and _show_tab.get_global_rect().has_point(pos):
+		return true
+	return false
 
 func _build_ui() -> void:
 	var s := UiLayout.scale_factor()
@@ -63,9 +77,7 @@ func _build_ui() -> void:
 
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UiStyle.dock_box())
-	_panel.custom_minimum_size = Vector2(DOCK_W * s, 0)
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_panel.visible = false
 	root.add_child(_panel)
 
 	var m := MarginContainer.new()
@@ -80,7 +92,7 @@ func _build_ui() -> void:
 	v.add_theme_constant_override("separation", int(5 * s))
 	m.add_child(v)
 
-	# Header: "TOWER" + hide
+	# Header: "TOWER" + collapse
 	var head := HBoxContainer.new()
 	v.add_child(head)
 	head.add_child(_h3("TOWER", true))
@@ -89,12 +101,24 @@ func _build_ui() -> void:
 	hide.flat = true
 	hide.add_theme_font_size_override("font_size", int(12 * s))
 	hide.add_theme_color_override("font_color", UiStyle.LABEL_COL)
-	hide.pressed.connect(_on_hide_pressed)
+	hide.pressed.connect(func(): _set_hidden(true))
 	head.add_child(hide)
 
+	# Placeholder shown when nothing is selected.
+	_placeholder = Label.new()
+	_placeholder.text = "Select a tower to inspect."
+	_placeholder.add_theme_font_size_override("font_size", int(13 * s))
+	_placeholder.add_theme_color_override("font_color", Color("8f9a76"))
+	_placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_placeholder.custom_minimum_size = Vector2(0, 44 * s)
+	v.add_child(_placeholder)
+
+	# Content (name + stats + sell), hidden until a tower is selected.
+	_content = VBoxContainer.new()
+	_content.add_theme_constant_override("separation", int(5 * s))
+	v.add_child(_content)
+
 	# Tower card
-	var card := HBoxContainer.new()
-	card.add_theme_constant_override("separation", int(10 * s))
 	var nameblock := VBoxContainer.new()
 	_name_lab = Label.new()
 	_name_lab.text = "Tower"
@@ -106,8 +130,7 @@ func _build_ui() -> void:
 	_sub_lab.add_theme_color_override("font_color", Color("9fb088"))
 	nameblock.add_child(_name_lab)
 	nameblock.add_child(_sub_lab)
-	card.add_child(nameblock)
-	v.add_child(card)
+	_content.add_child(nameblock)
 
 	# Stat rows
 	for stat in STATS:
@@ -152,9 +175,9 @@ func _build_ui() -> void:
 		up.pressed.connect(_on_upgrade_pressed.bind(stat))
 		_stat_btn[stat] = up
 		row.add_child(up)
-		v.add_child(rowpanel)
+		_content.add_child(rowpanel)
 
-	# Total damage dealt this match (live). Restored — the UI rebuild dropped it.
+	# Total damage dealt this match (live).
 	var dmgpanel := PanelContainer.new()
 	dmgpanel.add_theme_stylebox_override("panel", UiStyle.stat_box())
 	var dm := MarginContainer.new()
@@ -177,7 +200,7 @@ func _build_ui() -> void:
 	_dmg_lab.add_theme_font_size_override("font_size", int(13 * s))
 	_dmg_lab.add_theme_color_override("font_color", Color("ffd27a"))
 	drow.add_child(_dmg_lab)
-	v.add_child(dmgpanel)
+	_content.add_child(dmgpanel)
 
 	# Sell
 	var sell := Button.new()
@@ -186,7 +209,16 @@ func _build_ui() -> void:
 	sell.add_theme_font_size_override("font_size", int(13 * s))
 	UiStyle.style_flat_button(sell, UiStyle.SELL_BG, 10, UiStyle.SELL_BG.darkened(0.3), 1, false)
 	sell.pressed.connect(_on_sell_pressed)
-	v.add_child(sell)
+	_content.add_child(sell)
+
+	# Thin re-open tab, shown only while collapsed.
+	_show_tab = Button.new()
+	_show_tab.text = "›"
+	_show_tab.add_theme_font_size_override("font_size", int(20 * s))
+	UiStyle.style_flat_button(_show_tab, UiStyle.CHIP_BG, 10, UiStyle.CHIP_BORDER, 2, true, 0, 0)
+	_show_tab.pressed.connect(func(): _set_hidden(false))
+	_show_tab.visible = false
+	root.add_child(_show_tab)
 
 func _h3(text: String, label_col: bool) -> Label:
 	var s := UiLayout.scale_factor()
@@ -197,65 +229,60 @@ func _h3(text: String, label_col: bool) -> Label:
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL if label_col else Control.SIZE_FILL
 	return l
 
-# --- open / close ---
+# --- layout / collapse ---
+
+# Dock the panel at the TOP of the reserved zone, sized to its CONTENT height (top-aligned,
+# like the mockup) — NOT stretched to fill the column. reset_size() snaps it to its
+# combined minimum, so it shrinks back when the content shrinks (e.g. selection cleared).
+func _relayout() -> void:
+	if _panel == null:
+		return
+	var s := UiLayout.scale_factor()
+	var vp := get_viewport().get_visible_rect().size
+	var reg := UiLayout.inspector_region(vp)
+	_panel.custom_minimum_size = Vector2(reg.size.x - UiLayout.board_margin(), 0)
+	_panel.position = reg.position
+	_panel.reset_size()
+	var tab_w := 30.0 * s
+	_show_tab.custom_minimum_size = Vector2(tab_w, 64 * s)
+	_show_tab.position = Vector2(vp.x - tab_w - UiLayout.board_margin(), reg.position.y)
+	_show_tab.reset_size()
+
+func _set_hidden(h: bool) -> void:
+	if _hidden == h:
+		return
+	_hidden = h
+	UiLayout.set_inspector_hidden(h)
+	_panel.visible = not h
+	_show_tab.visible = h
+	if game_view != null:
+		game_view.refit()  # board reclaims / yields the dock's width
+	_relayout()
+
+func _show_placeholder() -> void:
+	_placeholder.visible = true
+	_content.visible = false
+
+# --- selection ---
 
 func _on_tower_selected(tower) -> void:
 	_selected = tower
-	_open_dock()
+	if _hidden:
+		_set_hidden(false)  # selecting a tower always reveals the dock
+	_placeholder.visible = false
+	_content.visible = true
+	_refresh()
+	_relayout.call_deferred()  # grow to fit the stats
 
 func _on_selection_cleared() -> void:
 	_selected = null
-	_close_dock()
-
-func _on_hide_pressed() -> void:
-	if build_controller != null:
-		build_controller.close_upgrade_panel()
-	else:
-		_close_dock()
-
-func _dock_x_open(vp: Vector2) -> float:
-	return vp.x - _panel.size.x - 16.0 * UiLayout.scale_factor()
-
-func _open_dock() -> void:
-	if not is_instance_valid(_selected):
-		return
-	var vp := get_viewport().get_visible_rect().size
-	_panel.position.y = 74.0 * UiLayout.scale_factor()
-	_panel.visible = true
-	_refresh()
-	await get_tree().process_frame  # let the panel size to content before placing
-	if not is_instance_valid(_selected):
-		return
-	if not _open:
-		_panel.position.x = vp.x + 20.0
-	_kill_tween()
-	_tween = create_tween()
-	_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_tween.tween_property(_panel, "position:x", _dock_x_open(vp), 0.18)
-	_open = true
-
-func _close_dock() -> void:
-	if not _panel.visible:
-		_open = false
-		return
-	var vp := get_viewport().get_visible_rect().size
-	_open = false
-	_kill_tween()
-	_tween = create_tween()
-	_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	_tween.tween_property(_panel, "position:x", vp.x + 20.0, 0.16)
-	_tween.tween_callback(func(): _panel.visible = false)
-
-func _kill_tween() -> void:
-	if _tween != null and _tween.is_valid():
-		_tween.kill()
+	_show_placeholder()
+	_relayout.call_deferred()  # shrink back to the placeholder height
 
 # --- content ---
 
 func _refresh() -> void:
-	if not _open and not _panel.visible:
-		return
-	if not is_instance_valid(_selected):
+	if not is_instance_valid(_selected) or not _content.visible:
 		return
 	var in_build: bool = round_manager == null or round_manager.phase == "build"
 	var gold: int = round_manager.gold if round_manager != null else 99999

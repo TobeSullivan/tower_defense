@@ -72,8 +72,8 @@ static func _flat(bg: Color, corner: int, border_col: Color, border_w: int, shad
 		sb.content_margin_bottom = pad_v
 	if shadow:
 		sb.shadow_color = Color(0, 0, 0, 0.42)
-		sb.shadow_size = 7
-		sb.shadow_offset = Vector2(0, 5)
+		sb.shadow_size = 3            # halved (was 7) — drop shadows were too strong
+		sb.shadow_offset = Vector2(0, 2)  # halved (was 5)
 	return sb
 
 static func pill_box(gold := false) -> StyleBoxFlat:
