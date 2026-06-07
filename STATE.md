@@ -1,6 +1,8 @@
 # State — Wend
 Last updated: 2026-06-07
 
+> **Session wrap 2026-06-07 (design — in-match HUD):** full in-match layout designed + signed off, locked in `design/INMATCH_HUD.md`. Reserved **right rail** (status / score-or-standing / buttons), **maximized board** — cell count is now **25×16** (derived once at the 1080p reference using the current on-screen cell size + a 280px rail; locked **universal**, other resolutions scale + center the same grid), and **tower info as a contextual overlay** over the board (not a reserved dock), hide-button removed, Sell label bare. Reference mock: `notes/mockups/inmatch_assembly.html`. **This unblocks the campaign rebuild + the map editor** (board size was the dependency — editor authors against 25×16). Also recorded a 9-item polish/bug punch-list → `notes/polish_punchlist.md` (CC tasks). **Juice pass parked** — Tobe is reframing the throughput / Persona-Atlus direction himself before any spec is built; do not treat Claude's earlier framing as locked.
+
 > **Session wrap 2026-06-07:** two pieces shipped + deployed live — **Ranked LP/MMR engine + Surface 2** (the deferred ranked-scoring piece; MMR plumbed through Nakama, verified `GO avg_mmr`) and **server-owned Trials seeds** (resim §10 seed tail; `trials_seeds` RPC, verified live). The anti-cheat/scoring spine is now complete for Trials/campaign/ranked. **Everything left is Steam-gated** (distribution → human 2-client E2E) or wants a human (interactive solo playtest). USER → design work until Steam approves. See the two ✅ COMPLETE records under "Next step".
 
 > **Read order:** `claude-rules.md` → `RULES.md` → this file → `notes/open_items.md` (full backlog) → only the specific file the task needs.
@@ -43,6 +45,8 @@ First step toward the closed Steam beta is taken: **Steamworks partner account r
 ---
 
 ## Current focus
+**In-match HUD layout designed + signed off (2026-06-07)** — `design/INMATCH_HUD.md`. Board count locked **25×16** (universal, scale+center off 1080p). This was the dependency blocking the campaign rebuild + map editor — both now unblocked. Next design candidates: campaign rebuild/editor, juice (parked pending Tobe's reframe), Steam beta mechanics, GTM, season-pass numbers.
+
 **Multiplayer backend is LIVE and the full matchmaking spine is built end-to-end (2026-06-07).**
 On the box `5.78.110.182` (CPX31/`hil`): **Nakama** (`:7350` — device-auth identity, 66 leaderboards, `submit_score` RPC, forming-lobby match handler + matchmaker hook) and the **Godot match server** (UDP `8771` — room router hosting many concurrent matches). The client is fully wired: device auth → the 3 leaderboard surfaces on live data → **Find Match → matchmaker → forming lobby (X/8 + vote) → JOIN_ROOM a Godot room → networked match**. **Seven commits** `f178d01`→`e53d53c`, each phase verified headless or live against the box. Full per-phase build record under "Next step" below.
 
@@ -154,6 +158,9 @@ The anti-cheat spine is now complete for solo Trials/PVE (determinism → record
 - Still needs two humans: a real 2-client cross-network match (targets the end-state stack).
 
 ## Recently touched files
+- `design/INMATCH_HUD.md` — NEW (in-match HUD layout: reserved rail + maximized 25×16 board + contextual tower overlay; signed off 2026-06-07)
+- `notes/mockups/inmatch_assembly.html` — NEW (1080p reference mock of the locked layout)
+- `notes/polish_punchlist.md` — NEW (9-item polish/bug list from the 2026-06-07 review; CC tasks)
 - `src/scripts/match_coordinator.gd` — fixed-step sim clock + seeded rng + tick build timer + record capture
 - `src/scripts/round_manager.gd` — `BoardState.sim_step` ordered stepping + projectiles array
 - `src/scripts/{tower,spawner,projectile,mob}.gd` — `_process`→`sim_step` (externally driven); tower logs upgrades
@@ -190,6 +197,7 @@ The anti-cheat spine is now complete for solo Trials/PVE (determinism → record
 - `src/tools/campaign_verify.{gd,tscn}` — NEW (headless resource+maze+director verifier)
 
 ## Open questions / blocked on
-Full per-item status in `notes/open_items.md`. Active design: juice/game-feel pass · season-pass numbers · Steam closed-beta mechanics · GTM. CC chores: determinism (first job) · scale-name label-pass · campaign rebuild. Config-level: leaderboard reset anchors (proposed UTC), season length; queue escalation timings + join-window (dials, need telemetry). Blocked on data: B/S/G calibration, PVP seed-convergence, economy re-tune + campaign tuning integers for 25×14. Parked: individual-while-grouped Trials scoring, Ranked ready-check, crash match-reconstruction.
+**Board count LOCKED 25×16 (2026-06-07)** — replaces 25×14; universal, derived off 1080p, scale+center elsewhere. **Campaign rebuild + map editor now unblocked** (board size was the dependency); next-session candidate is the hand-authoring grid editor (color cells: board / obstacle / tower-ghost / checkpoint, + resizable zone circle) → see `notes/polish_punchlist.md` item 9. Minor open from the HUD pass: Speed button during build = present-but-disabled vs empty-until-run. Stat-row [+] / star icons are still placeholder (real-asset gap). Tower-info overlay-vs-in-rail is a live implementation tradeoff (it fits in the rail's lower gap) — locked as overlay, but in-rail is a fair alternative at build time.
+Full per-item status in `notes/open_items.md`. Active design: juice (parked, Tobe reframing) · season-pass numbers · Steam closed-beta mechanics · GTM.
 
 **Steam (ops):** identity verification pending (2–7 biz days, started 2026-06-07) — blocks App ID + Playtest creation. Confirm entity type chosen at registration. Decide confidential-keys vs. public-Coming-Soon for the Playtest.

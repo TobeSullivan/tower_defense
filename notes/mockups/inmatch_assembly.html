@@ -1,0 +1,145 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wend — full in-match assembly</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap');
+:root{
+  --dock:#2a3322;--dock-b:#161c0f;--chip:#39402c;--chip-b:#23170d;
+  --gold:#d9c98a;--gold-s:#b38e2c;--go:#5fbe38;--go-b:#2c5a18;
+  --terra:#b04a2a;--terra-b:#5e2310;--sage:#aebb96;--bg:#1c2216;
+  --shadow:0 5px 7px rgba(0,0,0,.42);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Fredoka',system-ui,sans-serif;font-weight:600}
+body{background:#0c0f08}
+.stage{position:relative;width:1920px;height:1080px;background:var(--bg);overflow:hidden;color:#fff}
+
+/* ---------- rail ---------- */
+.rail{position:absolute;top:0;right:0;width:280px;height:1080px;background:var(--bg);
+  display:flex;flex-direction:column;padding:18px 12px;gap:14px}
+.box{width:256px;background:var(--dock);border:2px solid var(--dock-b);border-bottom-width:4px;border-radius:16px;box-shadow:var(--shadow);padding:12px 13px}
+.box2{min-height:166px}
+.boxhead{font-size:11px;font-weight:700;letter-spacing:1.2px;color:var(--sage);text-align:center;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid #1c2414}
+.kv{display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:9px;padding:3px 1px}
+.kv .k{color:#d5e0c6;font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kv .v{font-weight:700;font-size:15px;white-space:nowrap}
+.kv .v.g{color:var(--gold)}
+.hero{display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:9px;padding:2px 1px 7px}
+.hero .k{color:#d5e0c6;font-weight:600;font-size:14px}
+.hero .v{font-weight:700;font-size:24px}
+.rung{display:grid;grid-template-columns:18px 1fr auto;align-items:baseline;column-gap:8px;padding:3px 1px;min-height:23px}
+.rung .s{color:var(--gold-s);font-weight:700;font-size:14px;text-align:center}
+.rung .k{color:#cdd8be;font-weight:500;font-size:14px}
+.rung .v{font-weight:700;font-size:14px;white-space:nowrap}
+.btns{display:flex;flex-direction:column;gap:9px}
+.btn{width:100%;height:44px;border-radius:13px;border:2px solid var(--chip-b);border-bottom-width:4px;background:var(--chip);
+  color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
+.btn.go{background:var(--go);border-color:var(--go-b);color:#10260a}
+.btn.dim{opacity:.42}
+.spacer{flex:1}
+
+/* ---------- board ---------- */
+.board{position:absolute}
+.board svg{display:block;width:100%;height:100%;border:3px solid #59481f;border-radius:5px;box-shadow:0 0 0 3px #2a3320,var(--shadow)}
+
+/* ---------- tower overlay (contextual, over board, top-right) ---------- */
+.tower{position:absolute;width:266px;background:var(--dock);border:2px solid var(--dock-b);border-bottom-width:4px;border-radius:18px;box-shadow:0 10px 22px rgba(0,0,0,.5);padding:12px 13px}
+.thead{font-size:10px;font-weight:700;letter-spacing:1.4px;color:var(--sage)}
+.tname{font-weight:700;font-size:19px;line-height:1.1;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tlv{font-size:11px;font-weight:500;color:var(--sage);margin-bottom:8px}
+.trow{display:grid;grid-template-columns:1fr 2.8em 2.2em 26px;align-items:center;column-gap:8px;padding:5px 1px;border-top:1px solid #1c2414}
+.trow .name{color:#e7eedd;font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .val{font-weight:700;font-size:13.5px;text-align:right;white-space:nowrap}
+.trow .cost{font-weight:700;font-size:12.5px;text-align:right;color:var(--gold);white-space:nowrap}
+.trow .plus{width:26px;height:24px;border-radius:7px;background:var(--go);border:2px solid var(--go-b);border-bottom-width:3px;color:#10260a;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.ttotal{display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:8px;padding:7px 1px 2px;margin-top:2px;border-top:2px solid #1c2414}
+.ttotal .name{color:var(--sage);font-weight:600;font-size:12.5px}
+.ttotal .val{font-weight:700;font-size:13px;color:var(--gold)}
+.sell{width:100%;height:34px;margin-top:9px;border-radius:11px;background:var(--terra);border:2px solid var(--terra-b);border-bottom-width:4px;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+</style>
+
+<div class="stage" id="stage">
+  <!-- board injected by JS (sized to fill) -->
+  <div class="board" id="board"></div>
+  <!-- contextual tower overlay -->
+  <div class="tower" id="tower">
+    <div class="thead">TOWER</div>
+    <div class="tname">Arrow Tower</div>
+    <div class="tlv">Lv 1 · selected</div>
+    <div class="trow"><span class="name">Damage</span><span class="val">25</span><span class="cost">15</span><span class="plus">+</span></div>
+    <div class="trow"><span class="name">Range</span><span class="val">3.3</span><span class="cost">20</span><span class="plus">+</span></div>
+    <div class="trow"><span class="name">Attack speed</span><span class="val">1.3/s</span><span class="cost">20</span><span class="plus">+</span></div>
+    <div class="trow"><span class="name">Crit</span><span class="val">0%</span><span class="cost">25</span><span class="plus">+</span></div>
+    <div class="trow"><span class="name">Crit dmg</span><span class="val">×1.50</span><span class="cost">25</span><span class="plus">+</span></div>
+    <div class="trow"><span class="name">Multishot</span><span class="val">1</span><span class="cost">60</span><span class="plus">+</span></div>
+    <div class="ttotal"><span class="name">Total damage</span><span class="val">0 · 0 kills</span></div>
+    <div class="sell">Sell</div>
+  </div>
+
+  <!-- rail -->
+  <div class="rail">
+    <div class="box">
+      <div class="kv"><span class="k">Round</span><span class="v">2 / 10</span></div>
+      <div class="kv"><span class="k">Phase</span><span class="v">Build · 0:17</span></div>
+      <div class="kv"><span class="k">Supply</span><span class="v">2 / 20</span></div>
+      <div class="kv"><span class="k">Gold</span><span class="v g">281</span></div>
+    </div>
+    <div class="box box2">
+      <div class="boxhead">SCORE</div>
+      <div class="hero"><span class="k">Current</span><span class="v">0</span></div>
+      <div class="rung"><span class="s">&#9733;</span><span class="k">1 star</span><span class="v">2,000</span></div>
+      <div class="rung"><span class="s">&#9733;</span><span class="k">2 star</span><span class="v">4,000</span></div>
+      <div class="rung"><span class="s">&#9733;</span><span class="k">3 star</span><span class="v">7,000</span></div>
+    </div>
+    <div class="box">
+      <div class="btns">
+        <div class="btn go">&#9656; Start Round</div>
+        <div class="btn dim">Speed 3&#215;</div>
+        <div class="btn">Build [B]</div>
+        <div class="btn">Menu</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+  </div>
+</div>
+
+<script>
+const RAIL=280, M=10, TILE=64, W=1920, H=1080;
+const ax0=M, ax1=W-RAIL-M, ay0=M, ay1=H-M;          // board area (left of rail)
+const aw=ax1-ax0, ah=ay1-ay0;
+const cols=Math.floor(aw/TILE), rows=Math.floor(ah/TILE);
+const bw=cols*TILE, bh=rows*TILE;
+const bx=ax0+(aw-bw)/2, by=ay0+(ah-bh)/2;            // centered remainder
+window.__grid={cols,rows,tile:TILE,bw,bh,bx,by};
+
+// board svg in tile coords
+function path(){return `
+  <g stroke="#e0c878" stroke-width="0.9" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 4 H17 V12 H${cols}"/><path d="M21 12 V2 H${cols}"/></g>
+  <g stroke="#b9974a" stroke-width="0.11" fill="none" stroke-linecap="round">
+    <path d="M0 4 H17 V12 H${cols}"/><path d="M21 12 V2 H${cols}"/></g>`;}
+const svg=`<svg viewBox="0 0 ${cols} ${rows}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <defs><pattern id="g" width="1" height="1" patternUnits="userSpaceOnUse">
+    <rect width="1" height="1" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="0.03"/></pattern></defs>
+  <rect width="${cols}" height="${rows}" fill="#7cbf3f"/>
+  <rect width="${cols}" height="${rows}" fill="#000" opacity="0.04"/>
+  <rect width="${cols}" height="${rows}" fill="url(#g)"/>
+  ${path()}
+  <circle cx="5" cy="6.5" r="1.333" fill="#b04a2a" opacity="0.22" stroke="#d6603a" stroke-width="0.08"/>
+  <text x="5" y="6.65" text-anchor="middle" font-size="0.6" font-weight="700" fill="#fff" stroke="#1a2012" stroke-width="0.07" paint-order="stroke">DAMAGE +90%</text>
+  <circle cx="14.5" cy="9" r="2.333" fill="#3a86a8" opacity="0.22" stroke="#4fb0d6" stroke-width="0.08"/>
+  <text x="14.5" y="9.15" text-anchor="middle" font-size="0.6" font-weight="700" fill="#fff" stroke="#1a2012" stroke-width="0.07" paint-order="stroke">SLOW 60%</text>
+  <rect x="8.3" y="6.2" width="0.9" height="0.8" rx="0.12" fill="#4a4036"/>
+  <circle cx="18.5" cy="7" r="3.3" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.5)" stroke-width="0.06"/>
+  <rect x="18.05" y="6.55" width="0.9" height="0.9" rx="0.16" fill="#c0392b" stroke="#1a2012" stroke-width="0.06"/>
+  <text x="18.5" y="7.12" text-anchor="middle" font-size="0.55" font-weight="700" fill="#fff">1</text>
+  <circle cx="11" cy="4" r="0.27" fill="#2b2118"/><circle cx="21" cy="6" r="0.27" fill="#2b2118"/><circle cx="23.5" cy="11" r="0.27" fill="#2b2118"/>
+</svg>`;
+const b=document.getElementById('board');
+b.style.left=bx+'px';b.style.top=by+'px';b.style.width=bw+'px';b.style.height=bh+'px';
+b.innerHTML=svg;
+
+// tower overlay: fixed top-right of board, right edge hugging board's right edge
+const tw=266, t=document.getElementById('tower');
+t.style.left=(bx+bw-tw-10)+'px'; t.style.top=(by+12)+'px';
+</script>
