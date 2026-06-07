@@ -26,7 +26,9 @@ func start_wave(mob_count: int, spawn_interval: float, mob_hp: float, wave_path:
 func is_done() -> bool:
 	return _spawned >= _mob_count and not _active
 
-func _process(delta: float) -> void:
+# Driven by BoardState.sim_step on the fixed sim tick (no longer self-_process'd),
+# so spawn timing is framerate-independent and reproducible by the re-sim.
+func sim_step(delta: float) -> void:
 	if not _active:
 		return
 	if _spawned >= _mob_count:

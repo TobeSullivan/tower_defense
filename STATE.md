@@ -29,13 +29,24 @@ Last updated: 2026-06-07
 **Earlier (session 3): the MP + leaderboard spine** — `notes/resim_contract.md`, `leaderboard_schema.md`, `ghost_ladder.md`, `leaderboard_ui_spec.md` + mockups. Identity: Steam auth → Nakama, one identity, display name = Steam persona.
 
 ## Next step
-- **CC — make the sim deterministic** (the re-sim prerequisite). **§5.1 cross-platform float test: DONE ✅ (2026-06-07) — floats are bit-identical across Win/Mac/Linux-glibc, so we build the conversion on `float`, no fixed-point.** Probe `src/tools/float_probe.gd` + CI guard `.github/workflows/float-probe.yml` (stays as the regression test); evidence in `notes/float_probe_results.md`. **Remaining conversion work:** fixed logical tick (towers/spawner/projectiles are on `_process(delta)` today — framerate-dependent); one seeded RNG with ordered draws (crit uses global `randf()` at `tower.gd:175` today); tick-based build timer (currently wall-clock `delta` in `match_coordinator.gd:88`). This structural work is platform-neutral and pays off twice (anti-cheat AND clean lockstep MP). (Caveat: if the prod re-sim server ends up musl/Alpine, add a musl CI leg before trusting cross-platform — glibc-only doesn't clear musl's libm.)
+- **CC — sim determinism conversion: DONE ✅ (2026-06-07).** The re-sim prerequisite (§5) is built and verified:
+  - **§5.1 cross-platform float test:** floats bit-identical across Win/Mac/Linux-glibc → built on `float`, no fixed-point. Probe `src/tools/float_probe.gd` + CI guard `.github/workflows/float-probe.yml`; evidence `notes/float_probe_results.md`. (Caveat: if the prod re-sim server is musl/Alpine, add a musl CI leg — glibc-only doesn't clear musl's libm.)
+  - **Fixed logical tick:** all sim subsystems now stepped by one fixed-timestep clock in `match_coordinator.gd` (`SIM_DT`, `sim_tick`, accumulator + `MAX_STEPS_PER_FRAME`). Towers/spawner/projectiles/mobs no longer self-`_process` — they expose `sim_step()` and are driven in a fixed order by `BoardState.sim_step` (spawn→towers→projectiles→mobs). Clients still sim locally (entity-step on every machine; clock host-only) so netcode is preserved.
+  - **Seeded RNG, ordered draws:** the crit roll (was global `randf()`) now uses one per-match `coordinator.rng`, drawn in board→placement order. Only combat roll, so "all combat rolls seeded" is satisfied.
+  - **Tick-based build timer:** `build_ticks_left` is authoritative; `build_time_left` (sec) is just the HUD mirror.
+  - **Verified:** `src/tools/sim_harness.gd` (headless, tick-driven) runs a full 13-round match, **byte-identical across 2 runs**, 0 errors, build-timer auto-expiry exercised. Build-phase length proven not to leak into combat outcome.
+  - **Remaining (resim_contract §10, not yet started):** record capture (tick-tagged input log, extend `playtest_log.gd`) · headless re-sim runner + solo-log legality check · wire Trials score / Ranked placement to read from re-sim output. Also pending: wire the server-issued seed into `coordinator.sim_seed` (default 0 today); bot upgrade-pick still uses unseeded `randi()` (`bot_controller.gd:154`) — fine, bot matches are never re-simmed.
+  - **Needs a human:** real interactive playtest to confirm the live (frame-accumulator) path *feels* right — tick logic is exhaustively verified but the in-app UI/fast-forward flow wasn't driven headless.
 - **CC label-pass (mechanical):** Scale 1–5 → Thread/Weave/Tangle/Snarl/Knot across `design/DESIGN_MODES.md` + `design/VISUAL_SYSTEM.md`; remove the Trials "go home?" prompt. (Deliberately not done at wrap to avoid full-rewrite drift.)
 - **CC — campaign rebuild:** five missions per `design/CAMPAIGN.md`; deprecate old `levels/campaign/` `.tres`; build the tutorial-beat system (schema reopen, runtime shape CC's call) + ghost-outline overlay.
 - **Design — remaining big pieces:** juice/game-feel pass · Steam closed-beta mechanics · season-pass numbers · GTM. No design piece is currently blocking CC — the orchestration + campaign specs give CC a full plate.
 - Still needs two humans: a real 2-client cross-network match (targets the end-state stack).
 
 ## Recently touched files
+- `src/scripts/match_coordinator.gd` — fixed-step sim clock + seeded rng + tick build timer
+- `src/scripts/round_manager.gd` — `BoardState.sim_step` ordered stepping + projectiles array
+- `src/scripts/{tower,spawner,projectile,mob}.gd` — `_process`→`sim_step` (externally driven)
+- `src/tools/sim_harness.gd` — NEW (headless determinism regression harness)
 - `src/tools/float_probe.gd` — NEW (§5.1 cross-platform float probe)
 - `.github/workflows/float-probe.yml` — NEW (matrix CI determinism guard)
 - `notes/float_probe_results.md` — NEW (float test result: floats safe ✅)

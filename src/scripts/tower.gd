@@ -81,7 +81,10 @@ func _compute_zone_bonuses() -> void:
 		if zone.type in zone_bonus:
 			zone_bonus[zone.type] += zone.magnitude
 
-func _process(delta: float) -> void:
+# Driven by BoardState.sim_step on the fixed sim tick (no longer self-_process'd).
+# The single per-match RNG is threaded in so every crit roll lands in one defined
+# draw order (towers step in placement order) — the re-sim reproduces the sequence.
+func sim_step(delta: float, rng: RandomNumberGenerator) -> void:
 	cooldown = maxf(0.0, cooldown - delta)
 
 	var shot_count := 1 + get_multishot()
@@ -99,7 +102,7 @@ func _process(delta: float) -> void:
 	if targets.is_empty():
 		return
 	for t in targets:
-		_fire_at(t)
+		_fire_at(t, rng)
 	cooldown = get_cooldown()
 
 func get_damage() -> float:
@@ -171,8 +174,8 @@ func _find_targets(count: int) -> Array:
 		return in_range
 	return in_range.slice(0, count)
 
-func _fire_at(target: Node2D) -> void:
-	var is_crit := randf() < get_crit_chance()
+func _fire_at(target: Node2D, rng: RandomNumberGenerator) -> void:
+	var is_crit := rng.randf() < get_crit_chance()
 	var dmg := get_damage()
 	if is_crit:
 		dmg *= get_crit_damage_mult()
@@ -184,6 +187,10 @@ func _fire_at(target: Node2D) -> void:
 	p.source_tower = self
 	p.position = position
 	get_parent().add_child(p)
+	# Track on this board so BoardState.sim_step advances it on the fixed tick
+	# (projectiles no longer self-_process). board is the BoardState (round_manager).
+	if board != null:
+		board.projectiles.append(p)
 
 	sprite.texture = UNLOADED_TEX
 	var tween := create_tween()

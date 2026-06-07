@@ -216,6 +216,11 @@ A build timer + early-start window opens before **every** round, not just the fi
 
 1. **Determinism conversion** — fixed tick; seeded combat RNG with ordered draws; the
    cross-platform float test in §5.1 *first*; a determinism regression test.
+   **→ DONE 2026-06-07.** §5.1 passed (floats safe, CI guard live). Fixed-step clock in
+   `match_coordinator.gd`; subsystems driven via `BoardState.sim_step` (spawn→towers→
+   projectiles→mobs); seeded `coordinator.rng` for crit; tick-based build timer. Regression
+   harness `src/tools/sim_harness.gd` — full match byte-identical across runs, 0 errors.
+   Open: wire server seed into `coordinator.sim_seed` (default 0 today). See STATE "Next step".
 2. **Record capture** — emit the §2 record (extend `playtest_log.gd`, which already logs
    the seed) with the tick-tagged input log.
 3. **Re-sim runner** — headless replay of a record → authoritative result; legality check

@@ -11,6 +11,10 @@ var path: PackedVector2Array
 var path_index: int = 0
 var max_hp: float = GameConstants.MOB_BASE_HP
 var hp: float = GameConstants.MOB_BASE_HP
+# Set false SYNCHRONOUSLY by BoardState when this mob reaches the exit (before the
+# deferred queue_free), so towers/projectiles stop targeting it the same tick. A
+# kill only RESPAWNS the mob (see _explode_and_respawn) — alive stays true there.
+var alive: bool = true
 
 # The BoardState this mob belongs to (injected by its spawner). Damage and kills
 # credit only this board — NOT a global group, which would cross-contaminate every
@@ -50,14 +54,15 @@ static func _shared_walk_frames() -> SpriteFrames:
 	_walk_frames = frames
 	return _walk_frames
 
-func _physics_process(delta: float) -> void:
+# Driven by BoardState.sim_step on the fixed sim tick (no longer self-_physics_process'd).
+# Returns true when it reaches the exit; the board then marks it not-alive, drops it
+# from the mob array, and frees the node.
+func sim_step(delta: float) -> bool:
 	if path.size() < 2:
-		return
+		return false
 
 	if path_index >= path.size():
-		# Reached exit — despawn
-		queue_free()
-		return
+		return true  # reached exit — board despawns
 
 	var target := path[path_index]
 	var to_target := target - position
@@ -73,6 +78,7 @@ func _physics_process(delta: float) -> void:
 	# Rotate +PI/2 offset so head leads the movement direction.
 	if to_target.length_squared() > 0.01:
 		anim.rotation = to_target.angle() + PI / 2.0
+	return false
 
 func _current_speed() -> float:
 	# Sum magnitudes of all slow zones the mob currently overlaps.

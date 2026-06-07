@@ -35,8 +35,28 @@ var phase: String = "build"  # "build", "run", or "ended"
 # active board has readied; otherwise it waits for the build timer (lockstep — no
 # unilateral start, and no fast-forward, in multiplayer).
 var _ready_set: Dictionary = {}
-var build_time_left: float = GameConstants.BUILD_TIME_FIRST
+var build_time_left: float = GameConstants.BUILD_TIME_FIRST  # SECONDS — display proxy for the HUD
 var match_over: bool = false
+
+# === Fixed-step deterministic sim clock (resim_contract.md §5) ===
+# The sim advances in fixed increments; the tick count is the ONLY clock inside the
+# sim. Render framerate and Engine.time_scale change only HOW MANY ticks run per
+# rendered frame (live pacing) — never the result. Re-sim replays the same tick
+# sequence headless and gets the same answer. §5.1 confirmed floats are safe here.
+const SIM_HZ := 60
+const SIM_DT := 1.0 / SIM_HZ          # the only dt the sim ever sees
+const MAX_STEPS_PER_FRAME := 8        # spiral-of-death guard / fast-forward cap (pacing only)
+var sim_tick: int = 0
+var _sim_accum: float = 0.0
+# Build-phase countdown in TICKS (authoritative); build_time_left mirrors it in
+# seconds for the HUD. On a networked client the host owns it (net_set_build_time).
+var build_ticks_left: int = 0
+# One per-match seeded RNG for ALL combat rolls (crit), drawn in a fixed order:
+# boards in registration order → towers in placement order (see _step_entities /
+# BoardState.sim_step). Seed comes from the match record; default 0 keeps offline
+# runs reproducible. Wiring the server-issued seed is the record-capture task.
+var sim_seed: int = 0
+var rng := RandomNumberGenerator.new()
 
 # Networked PVP: on a CLIENT the authoritative host owns the clock, so the client's
 # coordinator does NOT self-tick — NetMatch drives it via the net_* methods below.
@@ -80,18 +100,60 @@ func try_consume_bot_action() -> bool:
 	_bot_actions_this_frame += 1
 	return true
 
+func _ready() -> void:
+	# Seed the single combat RNG and arm the tick-based build timer. map_loader sets
+	# all coordinator config (incl. sim_seed) BEFORE add_child, so it's ready here.
+	rng.seed = sim_seed
+	build_ticks_left = _build_ticks_for(round_num)
+	build_time_left = build_ticks_left * SIM_DT
+
 func _process(delta: float) -> void:
 	_bot_actions_this_frame = 0  # reset the per-frame bot budget (coordinator runs first)
-	if match_over or driven_externally:
-		return  # a networked client follows the host's clock (see net_* below), not its own
+	if match_over:
+		return
+	# Fixed-timestep accumulator: convert real (time_scaled) frame time into a whole
+	# number of fixed sim ticks. Backlog beyond the cap is dropped — that only slows
+	# live pacing under load; the authoritative outcome is the tick sequence itself.
+	_sim_accum += delta
+	var backlog_cap := MAX_STEPS_PER_FRAME * SIM_DT
+	if _sim_accum > backlog_cap:
+		_sim_accum = backlog_cap
+	var steps := 0
+	while _sim_accum >= SIM_DT and steps < MAX_STEPS_PER_FRAME:
+		_sim_accum -= SIM_DT
+		steps += 1
+		_sim_tick_once()
+
+# One fixed logical tick. Entities simulate locally on EVERY machine during the run
+# (host and client both run the full sim — only build inputs + the clock cross the
+# wire). The match clock is host-owned: a networked client mirrors it via net_* and
+# must not self-advance.
+func _sim_tick_once() -> void:
+	sim_tick += 1
+	if phase == "run":
+		_step_entities()
+	if driven_externally:
+		return
 	if phase == "build":
-		build_time_left = maxf(0.0, build_time_left - delta)
-		emit_signal("build_timer_changed", build_time_left)
-		if build_time_left <= 0.0:
+		if build_ticks_left > 0:
+			build_ticks_left -= 1
+			build_time_left = build_ticks_left * SIM_DT
+			emit_signal("build_timer_changed", build_time_left)
+		if build_ticks_left <= 0:
 			_start_run_phase()
 	else:  # run
 		if _all_runs_done():
 			_end_round()
+
+# Step every active board's sim by one tick, boards in registration (seat) order so
+# the shared RNG's draw sequence is fixed and reproducible by the re-sim.
+func _step_entities() -> void:
+	for b in boards:
+		if b.is_active():
+			b.sim_step(SIM_DT, rng)
+
+func _build_ticks_for(rn: int) -> int:
+	return int(round(_build_duration_for(rn) * SIM_HZ))
 
 # Global mob-HP curve (per DESIGN): flat for the first N rounds, then geometric.
 func mob_hp_for_round() -> float:
@@ -181,7 +243,8 @@ func _end_round() -> void:
 	round_num += 1
 	emit_signal("round_changed", round_num)
 	phase = "build"
-	build_time_left = _build_duration_for(round_num)
+	build_ticks_left = _build_ticks_for(round_num)
+	build_time_left = build_ticks_left * SIM_DT
 	emit_signal("phase_changed", phase)
 	emit_signal("build_timer_changed", build_time_left)
 
@@ -333,8 +396,10 @@ func _clear_all_mobs() -> void:
 	for b in boards:
 		for m in b.mobs_array:
 			if is_instance_valid(m):
+				m.alive = false
 				m.queue_free()
 		b.mobs_array.clear()
+		b.clear_projectiles()
 
 func _build_duration_for(rn: int) -> float:
 	if rn == 1:
