@@ -1,5 +1,7 @@
 # State — Wend
-Last updated: 2026-06-08
+Last updated: 2026-06-07
+
+> **Session wrap 2026-06-07:** two pieces shipped + deployed live — **Ranked LP/MMR engine + Surface 2** (the deferred ranked-scoring piece; MMR plumbed through Nakama, verified `GO avg_mmr`) and **server-owned Trials seeds** (resim §10 seed tail; `trials_seeds` RPC, verified live). The anti-cheat/scoring spine is now complete for Trials/campaign/ranked. **Everything left is Steam-gated** (distribution → human 2-client E2E) or wants a human (interactive solo playtest). USER → design work until Steam approves. See the two ✅ COMPLETE records under "Next step".
 
 > **Read order:** `claude-rules.md` → `RULES.md` → this file → `notes/open_items.md` (full backlog) → only the specific file the task needs.
 > **History:** older session logs were moved to `STATE_ARCHIVE.md` — reference only, don't load unless you're digging into a past decision.
