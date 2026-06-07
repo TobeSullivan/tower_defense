@@ -5,28 +5,52 @@ Hetzner box as the headless Godot match server (`deploy/README.md`). **Nakama is
 layer, not the match authority** — the Godot server runs matches; Nakama matchmakes and hands
 clients a `match_id`/address (`notes/remote_beta_plan.md`, `notes/multiplayer_architecture.md`).
 
-Decisions (2026-06-08): self-host on the existing box resized to ~8 GB; device-auth first
-(Steam later); first milestone = leaderboards + matchmaking. Heroic Cloud rejected on cost.
+Decisions (2026-06-08): self-host on a dedicated ~8 GB box; device-auth first (Steam later);
+first milestone = leaderboards + matchmaking. Heroic Cloud rejected on cost.
+
+**Box (2026-06-08):** `5.78.110.182` — **CPX31** (4 vCPU AMD / 8 GB / 160 GB), Hetzner
+**Hillsboro (us-west, `hil`)**, Ubuntu. This replaced the old CPX11 at `ash`. We did **not**
+rescale: CPX11 is a deprecated Gen1 type and `ash` had no CPX31 capacity to rescale into, and
+since nothing was wired to the box yet, a fresh create at `hil` was cleaner than a snapshot
+restore. Old box deleted (billing stopped). Latency: ~30–45 ms higher for US-East testers than
+`ash` — irrelevant for tower placement during build phases.
 
 ---
 
-## 0. One-time: resize the box + install Docker  (USER)
+## 0. One-time: provision the box + install Docker  (USER) — DONE 2026-06-08
 
-The current CPX11 has **2 GB** — too tight for Nakama + Postgres next to a match sim. Resize up
-first.
+The box is already created and firewalled. Recorded here for reproducibility / future moves.
 
-1. **Resize (Hetzner Console):** Server → `178.156.171.215` → Power off → **Rescale** →
-   pick **CPX31** (4 vCPU / 8 GB) or **CCX13** (dedicated 2 vCPU / 8 GB) → keep the disk →
-   power on. (Rescaling up is non-destructive; disk can't shrink.)
+1. **Create the server (Hetzner Console):** New server → location **Hillsboro (`hil`)** →
+   image **Ubuntu** → type **CPX31** (4 vCPU / 8 GB) → your SSH key → create. (Note: the old
+   Gen1 CPX line is deprecated for *new rescale targets* in some DCs; creating fresh sidesteps
+   the rescale-capacity problem entirely and lets you pick the exact size up front. If you ever
+   move again, create fresh + redeploy rather than rescale.)
 2. **Install Docker** (Ubuntu):
    ```bash
-   ssh root@178.156.171.215
+   ssh root@5.78.110.182
    curl -fsSL https://get.docker.com | sh
    docker compose version   # confirm the compose plugin is present
    ```
-3. **Firewall (Hetzner Cloud Firewall):** add inbound TCP **7350** (client API, any IP) and
-   TCP **7351** (console — restrict to *your* IP). Leave UDP 8771 (match server) + TCP 22 as-is.
-   Do NOT expose 5432 (Postgres stays on the private compose network).
+3. **Firewall (Hetzner Cloud Firewall — `firewall-1`, 3 inbound rules):**
+   - TCP **22** (SSH) — any IP
+   - TCP **7350** (client API) — any IP (players need it)
+   - UDP **8771** (Godot match server) — any IP
+   - Do **NOT** add a public rule for 7351 (console) or 5432 (Postgres). The console is reached
+     via SSH tunnel (below); Postgres stays on the private compose network.
+
+   **Console access = SSH tunnel** (chosen over an allow-my-IP rule because the residential IP
+   is dynamic — no per-rotation maintenance, and the admin panel is never publicly exposed):
+   ```bash
+   ssh -L 7351:localhost:7351 root@5.78.110.182   # leave open
+   # then browse http://localhost:7351
+   ```
+   Same pattern for Postgres if ever needed: `-L 5432:localhost:5432`.
+
+> **TODO (CC, deploy-time hardening):** in `docker-compose.yml`, bind the console to loopback —
+> `127.0.0.1:7351:7351` instead of `7351:7351` — so the console is tunnel-only even if the
+> cloud firewall is ever misconfigured. The tunnel still works (targets the server's
+> 127.0.0.1). Leave 7350 on `0.0.0.0` — players need it public.
 
 > TLS: for the beta the Godot client talks plaintext to `:7350`. Before a public launch, put
 > Caddy/nginx + Let's Encrypt in front (a domain) and switch the client to `wss`/`https`.
@@ -35,9 +59,9 @@ first.
 
 ```bash
 # From the dev machine — upload this folder (excludes .env/pgdata via .gitignore):
-rsync -av --exclude pgdata --exclude .env deploy/nakama/ root@178.156.171.215:/opt/wend-nakama/
+rsync -av --exclude pgdata --exclude .env deploy/nakama/ root@5.78.110.182:/opt/wend-nakama/
 
-ssh root@178.156.171.215
+ssh root@5.78.110.182
 cd /opt/wend-nakama
 cp .env.example .env && nano .env      # set strong secrets (openssl rand -hex 24)
 docker compose up -d
@@ -46,7 +70,8 @@ docker compose logs -f nakama          # expect: "Wend runtime loaded: campaign 
 
 ## 2. Verify
 
-- **Console:** browse `http://178.156.171.215:7351`, log in with `NAKAMA_CONSOLE_*`.
+- **Console (via tunnel):** open the SSH tunnel (§0.3), then browse `http://localhost:7351`,
+  log in with `NAKAMA_CONSOLE_*`.
   - *Leaderboards* tab → `campaign_m01..05`, `ranked_s1`, and `trials_*` (60) all present.
   - *Runtime modules* → `index.js` loaded, RPC `submit_score` registered.
 - **Health:** `docker compose exec nakama /nakama/nakama healthcheck` → ok.

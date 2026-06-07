@@ -14,7 +14,7 @@ Context that's already settled (don't re-litigate):
   Win+Mac, itch app auto-updates + strips macOS quarantine). Steam is the eventual
   launch home but **not** for a 2-friend beta (Steamworks $100 + multi-day Valve review).
 - Connection plumbing is DONE: clients connect outbound to the live Hetzner match
-  server (`178.156.171.215`, UDP 8771) — no port-forwarding, no NAT punching.
+  server (`5.78.110.182`, UDP 8771) — no port-forwarding, no NAT punching.
 - Leaderboard *system/data* design is locked in `notes/leaderboards.md` (Nakama backend;
   board set; metric = total damage; group scoring per-team; window cadence). What's
   missing is the **UI** and the **identity model** below.

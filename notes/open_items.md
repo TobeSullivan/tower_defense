@@ -72,8 +72,13 @@ Status key: **RESOLVED** · **NEAR** · **REC-PENDING** · **DIRECTION-SET** · 
 - **Economy/supply re-tune** for the 25×14 board.
 - **Campaign tuning integers** — supply/rounds/mobs/zone-mix for the five missions; wait on 25×14 retune + scores.
 
+## Deploy / ops
+- **Backend box moved `ash`→`hil` (2026-06-08).** New box: `5.78.110.182`, CPX31 (4 vCPU / 8 GB / 160 GB), Hetzner Hillsboro (us-west), Ubuntu. Old CPX11 at `ash` deleted (billing stopped). Reason: CPX11 is a deprecated Gen1 type and `ash` had no CPX31 rescale capacity; created fresh (nothing wired yet, so cleaner than a snapshot restore). Firewall `firewall-1` = 3 inbound rules (TCP 22, TCP 7350, UDP 8771 — all any-IP); console reached via SSH tunnel, NOT a public 7351 rule (residential IP is dynamic). IP swapped across repo docs + `src/scripts/lobby.gd`.
+- **CC, deploy-time hardening (small):** in `deploy/nakama/docker-compose.yml`, bind the Nakama console to loopback — `127.0.0.1:7351:7351` instead of `7351:7351` — so the console is tunnel-only even if the cloud firewall is ever misconfigured. The SSH tunnel still works (targets the server's 127.0.0.1). Leave 7350 on `0.0.0.0` (players need it public). Do this on the first deploy pass.
+
 ## Drift / audit
 - **40×22 → 25×14 grid figure** — DESIGN_MODES campaign section now flags it; sweep for other stale 40×22 / mission-count references across docs at next audit.
+- **`notes/beta_design_brief.md` stale framing** — still says itch.io draft + "Steam not for a 2-friend beta"; both reversed (closed Steam beta is the target, $100 paid). IP was swapped but the distribution framing wasn't rewritten (out of scope at the server-move wrap). Fix at next audit.
 
 ## Own session (large)
 - **Juice / game-feel pass** — tweens, particles, hit-pause, shake, road shader. Light taste mockup exists.
