@@ -1,0 +1,127 @@
+name: float-determinism-probe
+
+# Cross-platform float determinism guard (resim_contract.md §5.1).
+# Runs src/tools/float_probe.gd headless on Windows, macOS, and Linux with the
+# SAME pinned Godot build, then fails if the three bit-exact fingerprints
+# disagree. This is both the answer to "are floats safe across our platforms?"
+# and the permanent regression test the contract asks for — a future engine or
+# toolchain bump that silently reintroduces divergence will turn this job red.
+#
+# Win/Mac are the client platforms; ubuntu is the stand-in for the Linux re-sim
+# server. NOTE: ubuntu-latest is glibc. If the production re-sim server runs on
+# musl (Alpine), add a musl leg (container: alpine) — musl's libm differs from
+# glibc's and a glibc-only pass would not clear it.
+
+on:
+  push:
+    paths:
+      - "src/tools/float_probe.gd"
+      - "src/resources/game_constants.gd"
+      - ".github/workflows/float-probe.yml"
+  pull_request:
+    paths:
+      - "src/tools/float_probe.gd"
+      - "src/resources/game_constants.gd"
+      - ".github/workflows/float-probe.yml"
+  workflow_dispatch: {}
+
+env:
+  GODOT_VERSION: "4.6.3"
+
+jobs:
+  probe:
+    name: probe (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download pinned Godot (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${GODOT_VERSION}"
+          base="https://github.com/godotengine/godot-builds/releases/download/${ver}-stable"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            asset="Godot_v${ver}-stable_linux.x86_64"
+            curl -fL -o godot.zip "${base}/${asset}.zip"
+            unzip -q godot.zip -d godot_bin
+            bin="$(pwd)/godot_bin/${asset}"
+          else
+            curl -fL -o godot.zip "${base}/Godot_v${ver}-stable_macos.universal.zip"
+            unzip -q godot.zip -d godot_bin
+            xattr -dr com.apple.quarantine godot_bin/Godot.app || true
+            bin="$(pwd)/godot_bin/Godot.app/Contents/MacOS/Godot"
+          fi
+          chmod +x "$bin"
+          echo "GODOT_BIN=$bin" >> "$GITHUB_ENV"
+
+      - name: Download pinned Godot (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ver = "${env:GODOT_VERSION}"
+          $url = "https://github.com/godotengine/godot-builds/releases/download/$ver-stable/Godot_v$ver-stable_win64.exe.zip"
+          Invoke-WebRequest -Uri $url -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot_bin -Force
+          $bin = (Get-ChildItem godot_bin -Filter *.exe | Select-Object -First 1).FullName
+          "GODOT_BIN=$bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Run float probe
+        shell: bash
+        run: |
+          set -uo pipefail
+          "$GODOT_BIN" --version || true
+          # 2>&1 so Godot's SCRIPT ERROR lines (which go to stderr) are captured.
+          "$GODOT_BIN" --headless --path ./src --script res://tools/float_probe.gd > probe_full.txt 2>&1 || true
+          echo "----- probe output -----"
+          cat probe_full.txt
+          echo "------------------------"
+          combined="$(grep -E '^COMBINED' probe_full.txt | awk '{print $3}' | tr -d '[:space:]')"
+          if [ -z "$combined" ]; then
+            echo "::error::probe produced no COMBINED fingerprint (parse error or crash) on ${{ matrix.os }}"
+            exit 1
+          fi
+          echo "$combined" > combined.txt
+          echo "::notice::${{ matrix.os }} COMBINED=$combined"
+
+      - name: Upload fingerprint
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ matrix.os }}
+          path: |
+            combined.txt
+            probe_full.txt
+
+  compare:
+    name: compare fingerprints
+    needs: probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all fingerprints
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      - name: Assert all platforms agree
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > all.txt
+          echo "Per-platform fingerprints:"
+          for f in results/result-*/combined.txt; do
+            d="$(basename "$(dirname "$f")")"
+            c="$(cat "$f")"
+            printf "  %-22s %s\n" "$d" "$c"
+            echo "$c" >> all.txt
+          done
+          distinct="$(sort -u all.txt | sed '/^$/d' | wc -l | tr -d '[:space:]')"
+          if [ "$distinct" -ne 1 ]; then
+            echo "::error::FLOAT DIVERGENCE — platforms disagree. Sim-critical accumulation must move to fixed-point before the re-sim contract can stand. Inspect each result-*/probe_full.txt 'bits=' lines to localize the drift (damage vs position vs hp)."
+            exit 1
+          fi
+          echo "✅ All platforms produced an identical fingerprint — floats are deterministic across Win/Mac/Linux for our sim math."
