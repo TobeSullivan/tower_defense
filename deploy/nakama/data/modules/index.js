@@ -23,12 +23,32 @@ var CAMPAIGN_MISSIONS = 5;     // matches SceneManager.CAMPAIGN_MISSION_COUNT (w
 var CURRENT_SEASON = 1;        // ranked_s<N>; bump on season roll
 var RECORD_COLLECTION = "match_records";  // storage collection for re-sim re-validation
 
+// --- Forming lobby (matchmaking_orchestration.md) ---
+var LOBBY_MODULE = "lobby";
+var LOBBY_MAX = 8;     // auto-launch (no vote) when the lobby fills to this
+var LOBBY_FLOOR = 4;   // minimum present before a launch vote is allowed
+// The Godot match server clients connect to after launch (same box, UDP). Override per deploy.
+var MATCH_SERVER_HOST = "5.78.110.182";
+var MATCH_SERVER_PORT = 8771;
+// Lobby match op codes.
+var OP_VOTE = 1;          // C->S: vote to launch now
+var OP_LOBBY_STATE = 2;   // S->C: { count, max, floor, mode, present:[], voted:[] }
+var OP_GO = 3;            // S->C: { match_id, host, port } — go join the Godot room
+
 function InitModule(ctx, logger, nk, initializer) {
 	_ensureCampaignBoards(logger, nk);
 	_ensureRankedBoard(logger, nk);
 	_ensureTrialsTournaments(logger, nk);
 	initializer.registerRpc("submit_score", rpcSubmitScore);
-	logger.info("Wend runtime loaded: campaign + ranked + %d Trials tournaments + submit_score RPC",
+	// Forming lobby: an authoritative "lobby" match accretes matchmaker pops up to 8, runs the
+	// vote, then points everyone at a Godot match-server room (notes/matchmaking_orchestration.md).
+	initializer.registerMatch(LOBBY_MODULE, {
+		matchInit: lobbyInit, matchJoinAttempt: lobbyJoinAttempt, matchJoin: lobbyJoin,
+		matchLeave: lobbyLeave, matchLoop: lobbyLoop, matchTerminate: lobbyTerminate,
+		matchSignal: lobbySignal,
+	});
+	initializer.registerMatchmakerMatched(matchmakerMatched);
+	logger.info("Wend runtime loaded: campaign + ranked + %d Trials tournaments + submit_score RPC + lobby match",
 		SCALES.length * GROUPS.length * Object.keys(WINDOWS).length);
 }
 
@@ -129,6 +149,117 @@ function rpcSubmitScore(ctx, logger, nk, payload) {
 
 function errInvalid(msg) { return { message: msg, code: 3 }; }       // INVALID_ARGUMENT
 function errPermission(msg) { return { message: msg, code: 7 }; }    // PERMISSION_DENIED
+
+// ---------------------------------------------------------------------------
+// Forming-lobby authoritative match + matchmaker routing (orchestration spine).
+// Authority stays in the Godot match server; this lobby only forms the group and then hands
+// everyone a (match_id, host, port) to join there. Accreting model: each matchmaker pop joins
+// the SAME open lobby for its mode until it locks (8, or a unanimous-of-present vote at 4–7).
+// ---------------------------------------------------------------------------
+
+// Matchmaker pop → route into an OPEN lobby for the mode (accretion), else create one.
+function matchmakerMatched(ctx, logger, nk, matches) {
+	var mode = "ranked";
+	if (matches.length > 0 && matches[0].properties && matches[0].properties.mode) {
+		mode = matches[0].properties.mode;
+	}
+	try {
+		var open = nk.matchList(1, true, "", null, null, "+label.mode:" + mode + " +label.open:1");
+		if (open.length > 0) {
+			logger.info("matchmaker → existing lobby %s (mode %s)", open[0].matchId, mode);
+			return open[0].matchId;
+		}
+	} catch (e) {
+		logger.warn("matchList failed: %s", (e && e.message) || e);
+	}
+	return nk.matchCreate(LOBBY_MODULE, { mode: mode });
+}
+
+function lobbyInit(ctx, logger, nk, params) {
+	var mode = (params && params.mode) ? params.mode : "ranked";
+	var state = { mode: mode, presences: {}, votes: {}, launched: false };
+	return { state: state, tickRate: 2, label: JSON.stringify({ mode: mode, open: 1 }) };
+}
+
+function lobbyJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, metadata) {
+	if (state.launched || _lobbyCount(state) >= LOBBY_MAX) {
+		return { state: state, accept: false, rejectMessage: "lobby full or already launched" };
+	}
+	return { state: state, accept: true };
+}
+
+function lobbyJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
+	for (var i = 0; i < presences.length; i++) state.presences[presences[i].userId] = presences[i];
+	_lobbyBroadcast(dispatcher, state);
+	if (_lobbyCount(state) >= LOBBY_MAX) _lobbyLaunch(dispatcher, nk, state, logger);  // auto at 8
+	_lobbyRelabel(dispatcher, state);
+	return { state: state };
+}
+
+function lobbyLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
+	for (var i = 0; i < presences.length; i++) {
+		delete state.presences[presences[i].userId];
+		delete state.votes[presences[i].userId];
+	}
+	if (_lobbyCount(state) === 0) return null;  // empty → terminate
+	if (!state.launched) _lobbyBroadcast(dispatcher, state);
+	_lobbyRelabel(dispatcher, state);
+	return { state: state };
+}
+
+function lobbyLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
+	if (state.launched) return null;  // GO was sent last tick → tear the lobby down now
+	var changed = false;
+	for (var i = 0; i < messages.length; i++) {
+		if (messages[i].opCode === OP_VOTE) {
+			state.votes[messages[i].sender.userId] = true;
+			changed = true;
+		}
+	}
+	if (changed) {
+		_lobbyBroadcast(dispatcher, state);
+		_lobbyMaybeVoteLaunch(dispatcher, nk, state, logger);
+	}
+	return { state: state };
+}
+
+function lobbySignal(ctx, logger, nk, dispatcher, tick, state, data) { return { state: state, data: data }; }
+function lobbyTerminate(ctx, logger, nk, dispatcher, tick, state, graceSeconds) { return { state: state }; }
+
+function _lobbyCount(state) { return Object.keys(state.presences).length; }
+
+function _lobbyBroadcast(dispatcher, state) {
+	var present = Object.keys(state.presences);
+	var voted = Object.keys(state.votes);
+	dispatcher.broadcastMessage(OP_LOBBY_STATE, JSON.stringify({
+		count: present.length, max: LOBBY_MAX, floor: LOBBY_FLOOR,
+		mode: state.mode, present: present, voted: voted }), null, null);
+}
+
+// Unanimous-of-present at floor..max-1: every present player must have voted yes (abstain = no).
+function _lobbyMaybeVoteLaunch(dispatcher, nk, state, logger) {
+	var present = Object.keys(state.presences);
+	if (present.length < LOBBY_FLOOR) return;
+	for (var i = 0; i < present.length; i++) {
+		if (!state.votes[present[i]]) return;
+	}
+	_lobbyLaunch(dispatcher, nk, state, logger);
+}
+
+function _lobbyLaunch(dispatcher, nk, state, logger) {
+	if (state.launched) return;
+	state.launched = true;
+	var matchId = nk.uuidv4();
+	dispatcher.broadcastMessage(OP_GO, JSON.stringify({
+		match_id: matchId, host: MATCH_SERVER_HOST, port: MATCH_SERVER_PORT }), null, null);
+	dispatcher.matchLabelUpdate(JSON.stringify({ mode: state.mode, open: 0 }));
+	logger.info("lobby launched: room=%s players=%d", matchId, _lobbyCount(state));
+}
+
+function _lobbyRelabel(dispatcher, state) {
+	var open = (!state.launched && _lobbyCount(state) < LOBBY_MAX) ? 1 : 0;
+	dispatcher.matchLabelUpdate(JSON.stringify({ mode: state.mode, open: open }));
+}
 
 // Goja discovers InitModule in global scope after evaluating this file.
 !InitModule && InitModule.bind(null);

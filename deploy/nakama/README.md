@@ -93,9 +93,12 @@ docker compose logs -f nakama          # expect: "Wend runtime loaded: campaign 
 
 ## 3. Operating notes
 
-- **Restart / update config:** `docker compose up -d` (re-runs migrate, reloads the module —
-  board creates are idempotent). **Upgrade Nakama:** bump the image tag, `docker compose pull`,
-  `up -d`.
+- **Change the runtime module** (`data/modules/index.js`): `data/` is a volume mount loaded at
+  startup, so editing it is NOT picked up by `docker compose up -d` (no compose change → no
+  recreate). After `scp`-ing the new `index.js`, run **`docker compose restart nakama`** to reload
+  it; confirm via `docker compose logs nakama | grep "runtime loaded"`. Board creates are idempotent.
+- **Restart / change compose or .env:** `docker compose up -d` (recreates, re-runs migrate).
+  **Upgrade Nakama:** bump the image tag, `docker compose pull`, `up -d`.
 - **Backups:** `docker compose exec postgres pg_dump -U postgres nakama > backup.sql`.
 - **Season roll:** bump `CURRENT_SEASON` in `data/modules/index.js`, redeploy → a new
   `ranked_s<N>` board is created; the old one stays as the frozen past season.
