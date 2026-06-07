@@ -9,8 +9,12 @@ class_name MatchEndPanel
 
 const UiStyle := preload("res://scripts/ui_style.gd")
 const StarRatingScript := preload("res://scripts/star_rating.gd")
+const LeaderboardService := preload("res://scripts/leaderboard_service.gd")
 
 var round_manager  # RoundManager (local board) — untyped to avoid class-name cycle
+# Trials (PVE) leaderboard context: {window:int, tier:int, group:String}. Set by map_loader
+# for PVE only; empty for campaign/PVP (no Surface-1 placement block then).
+var lb_ctx := {}
 
 var _panel: PanelContainer
 var _title_label: Label
@@ -18,6 +22,7 @@ var _result_label: Label
 var _detail_label: Label
 var _stars_row: HBoxContainer    # medal mode: the earned star tier
 var _thresholds_vbox: VBoxContainer
+var _lb_vbox: VBoxContainer       # Trials post-match placement block (Surface 1)
 var _buttons_vbox: VBoxContainer
 
 const STAR_FOR_MEDAL := {"gold": 3, "silver": 2, "bronze": 1, "none": 0}
@@ -48,10 +53,10 @@ func _build_ui() -> void:
 	_panel.anchor_top = 0.5
 	_panel.anchor_right = 0.5
 	_panel.anchor_bottom = 0.5
-	_panel.offset_left = -240
-	_panel.offset_right = 240
-	_panel.offset_top = -220
-	_panel.offset_bottom = 220
+	# Size to content (the Trials placement block makes the medal panel taller than PVP).
+	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel.custom_minimum_size = Vector2(480, 0)
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_panel)
 
@@ -90,6 +95,12 @@ func _build_ui() -> void:
 	_thresholds_vbox = VBoxContainer.new()
 	_thresholds_vbox.add_theme_constant_override("separation", 4)
 	vbox.add_child(_thresholds_vbox)
+
+	# Trials post-match placement block (Surface 1) — populated in medal mode for PVE only.
+	_lb_vbox = VBoxContainer.new()
+	_lb_vbox.add_theme_constant_override("separation", 6)
+	_lb_vbox.visible = false
+	vbox.add_child(_lb_vbox)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 8)
@@ -158,13 +169,21 @@ func _show_medal() -> void:
 	_detail_label.text = "Total damage: %d  ·  Rounds: %d" % [damage, round_manager.max_rounds]
 	_thresholds_vbox.visible = true
 	_populate_thresholds(damage)
-	_set_buttons([
+	# Persist the result (campaign medal / PVE score) BEFORE reading placement so the board
+	# reflects this run's score.
+	SceneManager.report_match_result(damage)
+	# Trials (PVE) only: the leaderboard placement block + a "View full board" jump.
+	var buttons := [
 		{"text": "Play Again", "cb": _on_play_again, "role": "go"},
 		{"text": "Return Home", "cb": _on_return_home},
-	])
+	]
+	if not lb_ctx.is_empty():
+		_populate_placement(damage)
+		buttons.push_front({"text": "View full board", "cb": _on_view_board})
+	else:
+		_lb_vbox.visible = false
+	_set_buttons(buttons)
 	_panel.visible = true
-	# Persist the result (campaign medal / PVE score).
-	SceneManager.report_match_result(damage)
 
 # --- Helpers ---
 
@@ -213,6 +232,81 @@ func _add_threshold_row(star_count: int, threshold: int, achieved: int) -> void:
 
 	row.modulate = Color(1, 1, 1, 1.0) if reached else Color(1, 1, 1, 0.45)
 	_thresholds_vbox.add_child(row)
+
+# Surface 1: board context · "You placed #N today" · your neighborhood (±2). Reads through
+# LeaderboardService — offline you're #1 of your own board; Nakama fills the neighbors later.
+func _populate_placement(damage: int) -> void:
+	for child in _lb_vbox.get_children():
+		child.queue_free()
+	var window := int(lb_ctx.get("window", 0))
+	var tier := int(lb_ctx.get("tier", 1))
+	var group := String(lb_ctx.get("group", "solo"))
+	var data: Dictionary = LeaderboardService.trials_placement(window, tier, group, damage)
+
+	var ctx := _make_label(13, UiStyle.LABEL_COL)
+	ctx.text = String(data.get("context", ""))
+	ctx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lb_vbox.add_child(ctx)
+
+	var rank := int(data.get("rank", 0))
+	var placed := _make_label(18, Color.WHITE)
+	if rank > 0:
+		placed.text = "You placed #%d %s" % [rank, data.get("window_word", "")]
+	else:
+		placed.text = "Score posted — be the first on this board"
+	placed.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lb_vbox.add_child(placed)
+
+	for e in data.get("rows", []):
+		_lb_vbox.add_child(_placement_row(
+			int(e.get("rank", 0)), String(e.get("name", "")), int(e.get("score", 0)), bool(e.get("is_me", false))))
+	_lb_vbox.visible = true
+
+func _placement_row(rank: int, name: String, score: int, is_me: bool) -> Control:
+	var p := PanelContainer.new()
+	p.custom_minimum_size = Vector2(0, 34)
+	var bg := Color("3b5a2a") if is_me else UiStyle.CHIP_BG
+	var border := UiStyle.START_BORDER if is_me else UiStyle.CHIP_BORDER
+	p.add_theme_stylebox_override("panel", UiStyle.flat_box(bg, 10, border, 2, false))
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left", 12); m.add_theme_constant_override("margin_right", 12)
+	m.add_theme_constant_override("margin_top", 3); m.add_theme_constant_override("margin_bottom", 3)
+	p.add_child(m)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 10)
+	m.add_child(hb)
+	var rk := _make_label(14, Color("bfe6a3") if is_me else UiStyle.LABEL_COL)
+	rk.text = "%d" % rank
+	rk.custom_minimum_size = Vector2(34, 0)
+	rk.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hb.add_child(rk)
+	var nm := _make_label(14, Color("dffacb") if is_me else Color.WHITE)
+	nm.text = name
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.clip_text = true
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	hb.add_child(nm)
+	var sc := _make_label(14, Color("e8c45a"))
+	sc.text = _commas(score)
+	sc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hb.add_child(sc)
+	return p
+
+func _on_view_board() -> void:
+	SceneManager.goto_leaderboards({
+		"category": 0, "window": int(lb_ctx.get("window", 0)),
+		"tier": int(lb_ctx.get("tier", 1)), "group": String(lb_ctx.get("group", "solo"))})
+
+func _commas(n: int) -> String:
+	var s := str(n)
+	var out := ""
+	var c := 0
+	for i in range(s.length() - 1, -1, -1):
+		out = s[i] + out
+		c += 1
+		if c % 3 == 0 and i > 0:
+			out = "," + out
+	return out
 
 func _hide_panel() -> void:
 	_panel.visible = false

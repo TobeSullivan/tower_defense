@@ -18,6 +18,7 @@ func _ready() -> void:
 	_settings = SettingsPanelScript.new()
 	add_child(_settings)
 	_build_corner_settings()
+	_build_corner_leaderboards()
 	_build_corner_quit()
 
 func _input(event: InputEvent) -> void:
@@ -134,6 +135,23 @@ func _build_corner_settings() -> void:
 	settings.offset_right = -20
 	settings.offset_bottom = 56
 	add_child(settings)
+
+func _build_corner_leaderboards() -> void:
+	var lb := Button.new()
+	lb.text = "Leaderboards"
+	lb.add_theme_font_size_override("font_size", 15)
+	var ic := UiStyle.icon_texture("trophy")
+	if ic != null:
+		lb.icon = ic
+		lb.add_theme_constant_override("icon_max_width", 18)
+	UiStyle.style_menu_button(lb)
+	lb.pressed.connect(func(): SceneManager.goto_leaderboards())
+	lb.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	lb.offset_left = -190
+	lb.offset_top = -56
+	lb.offset_right = -20
+	lb.offset_bottom = -16
+	add_child(lb)
 
 func _build_corner_quit() -> void:
 	var quit := Button.new()

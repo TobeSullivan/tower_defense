@@ -45,6 +45,7 @@ const MapResourceScript := preload("res://resources/map_resource.gd")
 const BuildGuideScript := preload("res://scripts/build_guide.gd")
 const TutorialDirectorScript := preload("res://scripts/tutorial_director.gd")
 const TutorialCalloutScript := preload("res://scripts/tutorial_callout.gd")
+const GhostLadderScript := preload("res://scripts/ghost_ladder.gd")
 
 const CHECKPOINT_TEX := preload("res://assets/maps/level_marker_flag.png")
 const GRASS_TEX := preload("res://assets/maps/summer_grass_tile.png")
@@ -106,7 +107,7 @@ static func build_match(host: Node2D, map, num_boards: int = 1, local_index: int
 	# On-screen UI is bound to the LOCAL player's board (their seat).
 	var local_board = boards[local_index]
 	var local_ctrl = local_board.build_controller
-	var ui = _build_match_ui(host, local_board, local_ctrl)
+	var ui = _build_match_ui(host, local_board, local_ctrl, map, _build_ghost_ladder(map))
 	var strip = ui[0]
 	var drawer = ui[1]
 
@@ -275,11 +276,14 @@ static func _build_board(container: Node2D, map, coordinator, is_local: bool, us
 	return board
 
 # Builds the on-screen UI frame for the local board and returns [strip, drawer] (so
-# the caller can inject the PVP minimap ref and wire the game_view tap guard).
-static func _build_match_ui(host: Node2D, local_board, local_ctrl) -> Array:
+# the caller can inject the PVP minimap ref and wire the game_view tap guard). `map` is the
+# MapResource; `ghost_ladder` is the Trials target ladder (null outside PVE).
+static func _build_match_ui(host: Node2D, local_board, local_ctrl, map, ghost_ladder) -> Array:
+	var mode: int = int(map.mode)
 	var hud := HUDScript.new()
 	hud.round_manager = local_board
 	hud.build_controller = local_ctrl
+	hud.ghost_ladder = ghost_ladder  # set BEFORE add_child so _ready builds the caption
 
 	var strip := ActionStripScript.new()
 	strip.round_manager = local_board
@@ -291,9 +295,9 @@ static func _build_match_ui(host: Node2D, local_board, local_ctrl) -> Array:
 
 	var match_end := MatchEndPanelScript.new()
 	match_end.round_manager = local_board
-
-	var win_panel := WinPanelScript.new()
-	win_panel.round_manager = local_board
+	# Trials (PVE) only: the post-match leaderboard placement block (Surface 1).
+	if mode == MapResourceScript.Mode.PVE:
+		match_end.lb_ctx = {"window": int(map.window_type), "tier": int(map.scale_tier), "group": "solo"}
 
 	var round_toast := RoundToastScript.new()
 	round_toast.round_manager = local_board
@@ -307,10 +311,28 @@ static func _build_match_ui(host: Node2D, local_board, local_ctrl) -> Array:
 	host.add_child(strip)
 	host.add_child(drawer)
 	host.add_child(match_end)
-	host.add_child(win_panel)
+	# The gold-reached "you won — keep playing / go home?" prompt is a campaign-ism. Trials
+	# (PVE) runs until its rounds are spent — never interrupt a climb (notes/ghost_ladder.md).
+	if mode == MapResourceScript.Mode.CAMPAIGN:
+		var win_panel := WinPanelScript.new()
+		win_panel.round_manager = local_board
+		host.add_child(win_panel)
 	host.add_child(round_toast)
 	host.add_child(pause_menu)
 	return [strip, drawer]
+
+# Trials only: build the in-match ghost ladder (notes/ghost_ladder.md). The snapshot of
+# ghost scores is one cached leaderboard read fanned out per (map, window, group-size) at
+# match start — empty until the backend is wired, in which case the ladder falls through to
+# YOUR BEST / TOP. Campaign keeps the medal-only target; PVP hides the SCORE pill entirely.
+static func _build_ghost_ladder(map):
+	if map.mode != MapResourceScript.Mode.PVE:
+		return null
+	var ladder = GhostLadderScript.new()
+	var best := SaveData.best_pve_score(map.window_date, map.scale_tier)
+	ladder.setup(int(map.bronze_threshold), int(map.silver_threshold), int(map.gold_threshold),
+		GhostLadderScript.fetch_snapshot(map), best)
+	return ladder
 
 # Bounded board (v3 mockup): a BRIGHT, BORDERED grass arena sized exactly to the play
 # grid — no bleed. It sits in the dark recessed surround (see _setup_surround), so the

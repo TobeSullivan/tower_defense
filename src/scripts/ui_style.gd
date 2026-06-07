@@ -81,6 +81,11 @@ static func pill_box(gold := false) -> StyleBoxFlat:
 		return _flat(PILL_GOLD, 16, PILL_GOLD_BORDER, 2)
 	return _flat(PILL_BG, 16, PILL_BORDER, 2)
 
+# Public flat surface for arbitrary panels (leaderboard rows, band tags) that need a
+# one-off colour without a dedicated named role.
+static func flat_box(bg: Color, corner: int, border_col: Color, border_w := 2, shadow := true) -> StyleBoxFlat:
+	return _flat(bg, corner, border_col, border_w, shadow)
+
 static func stat_box() -> StyleBoxFlat:
 	return _flat(STAT_BG, 10, Color(0, 0, 0, 0), 0, false)
 

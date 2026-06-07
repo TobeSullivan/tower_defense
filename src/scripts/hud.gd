@@ -8,10 +8,15 @@ class_name HUD
 
 const UiLayout := preload("res://scripts/ui_layout.gd")
 const UiStyle := preload("res://scripts/ui_style.gd")
+const GhostLadderScript := preload("res://scripts/ghost_ladder.gd")
 const TOWER_ICON := preload("res://assets/towers/arrow_box_loaded.png")
 
 var round_manager  # RoundManager
 var build_controller  # BuildController
+# Trials only: the in-match ghost ladder (notes/ghost_ladder.md). Set by map_loader BEFORE
+# add_child so _ready can build the caption. Null in campaign (keeps the medal-only target)
+# and PVP (the SCORE pill is hidden there).
+var ghost_ladder  # GhostLadder — untyped to avoid the class-name cycle
 
 var _round_val: Label
 var _phase_val: Label
@@ -24,6 +29,7 @@ var _score_pill: Control
 var _lives_pill: Control
 var _lives_val: Label
 var _supply_val: Label
+var _ladder_caption: Label  # "standings as of match start" — ghost-ladder honesty contract
 
 var _towers_count: int = 0
 var _towers_cap: int = 0
@@ -85,6 +91,20 @@ func _ready() -> void:
 	# PVP is judged by placement/lives, not a score number — drop the SCORE pill there.
 	_score_pill.visible = not _is_pvp()
 	right.add_child(_score_pill)
+
+	# Ghost-ladder honesty contract: a persistent caption stating the targets are a
+	# match-start snapshot, never a live rank (notes/ghost_ladder.md). Trials only.
+	if ghost_ladder != null and not _is_pvp():
+		_ladder_caption = Label.new()
+		_ladder_caption.text = "standings as of match start"
+		_ladder_caption.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_ladder_caption.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		_ladder_caption.offset_top = 62 * s
+		_ladder_caption.offset_right = -16 * s
+		_ladder_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_ladder_caption.add_theme_font_size_override("font_size", int(11 * s))
+		_ladder_caption.add_theme_color_override("font_color", UiStyle.LABEL_COL)
+		add_child(_ladder_caption)
 
 	if round_manager != null:
 		round_manager.gold_changed.connect(func(_g): _refresh())
@@ -194,6 +214,10 @@ func _refresh() -> void:
 func _refresh_score() -> void:
 	var dmg: int = round_manager.total_damage_dealt
 	_score_val.text = _commas(dmg)
+	# Trials: the ghost ladder owns the target line (named tier → ghost → your best → TOP).
+	if ghost_ladder != null:
+		_refresh_ghost_target(dmg)
+		return
 	if round_manager.gold_threshold <= 0:
 		_score_medal_lab.text = ""
 		_medal_icon.visible = false
@@ -213,6 +237,26 @@ func _refresh_score() -> void:
 		return
 	_medal_icon.texture = UiStyle.icon_texture("medal_%s" % tier)
 	_score_medal_lab.text = "→%s %s" % [tier.capitalize(), _commas(nextv)]
+
+# Drive the SCORE pill's target line from the ghost ladder. The medal icon shows only in
+# the named-tier states (below gold); above gold the badge text carries the state. The line
+# always points at something until TOP — and never asserts a live rank (notes/ghost_ladder.md).
+func _refresh_ghost_target(dmg: int) -> void:
+	var t: Dictionary = ghost_ladder.target_for(dmg)
+	match int(t["state"]):
+		GhostLadderScript.State.NAMED_TIER:
+			_medal_icon.visible = true
+			_medal_icon.texture = UiStyle.icon_texture("medal_%s" % String(t["label"]).to_lower())
+			_score_medal_lab.text = "→%s %s" % [t["label"], _commas(int(t["target"]))]
+		GhostLadderScript.State.GHOST:
+			_medal_icon.visible = false
+			_score_medal_lab.text = "GHOST  →%s  %s" % [t["name"], _commas(int(t["target"]))]
+		GhostLadderScript.State.YOUR_BEST:
+			_medal_icon.visible = false
+			_score_medal_lab.text = "YOUR BEST  →%s" % _commas(int(t["target"]))
+		_:  # TOP — ladder exhausted; show your score only + the tag (rank waits for results)
+			_medal_icon.visible = false
+			_score_medal_lab.text = "TOP"
 
 func _commas(n: int) -> String:
 	var s := str(n)

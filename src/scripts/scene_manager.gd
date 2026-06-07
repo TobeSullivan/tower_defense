@@ -20,6 +20,7 @@ const HOME_SCENE := "res://scenes/home_screen.tscn"
 const CAMPAIGN_SELECT_SCENE := "res://scenes/campaign_select.tscn"
 const PVE_SELECT_SCENE := "res://scenes/pve_select.tscn"
 const LOBBY_SCENE := "res://scenes/lobby.tscn"
+const LEADERBOARD_SCENE := "res://scenes/leaderboard_browse.tscn"
 const MATCH_SCENE := "res://scenes/prototype.tscn"
 
 # --- Networked match (PVP). The transport is owned HERE (an autoload) so it persists
@@ -49,6 +50,10 @@ const CAMPAIGN_MISSION_COUNT := 5
 # main.gd), so re-simming never clobbers this. Cleared on return to home.
 var active_coordinator = null
 
+# Deep-link context for the leaderboard browse screen (which category/window/scale to land
+# on), consumed once by leaderboard_browse.gd. Empty = open at the default (Trials/Daily).
+var pending_leaderboard := {}
+
 # Set before a scene change; consumed by the match scene.
 var pending_map = null
 # Number of boards the match scene builds (1 = solo; PVP = PVP_BOARD_COUNT).
@@ -75,6 +80,14 @@ func goto_pve_select() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 	get_tree().change_scene_to_file(PVE_SELECT_SCENE)
+
+# The leaderboard hub. `ctx` deep-links a category/window/scale (e.g. a Trials-select card
+# or a post-match "View full board" jumps straight to its board); empty opens at the default.
+func goto_leaderboards(ctx := {}) -> void:
+	pending_leaderboard = ctx
+	get_tree().paused = false
+	Engine.time_scale = 1.0
+	get_tree().change_scene_to_file(LEADERBOARD_SCENE)
 
 # Solo PVE: a generated map played for score. Single-player for pause purposes.
 func start_pve_map(map) -> void:

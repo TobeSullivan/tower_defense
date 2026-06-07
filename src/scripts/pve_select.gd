@@ -11,6 +11,7 @@ const UiStyle := preload("res://scripts/ui_style.gd")
 const StarRatingScript := preload("res://scripts/star_rating.gd")
 const MapGen := preload("res://scripts/map_generator.gd")
 const MapResourceScript := preload("res://resources/map_resource.gd")
+const LeaderboardService := preload("res://scripts/leaderboard_service.gd")
 
 # A distinct seed salt per window so Daily/Weekly/Monthly can never collide even
 # if their identity hashes land near each other.
@@ -140,7 +141,11 @@ func _show_window(window_type: int) -> void:
 
 func _map_card(map) -> Control:
 	var tier: int = map.scale_tier
-	var best: int = SaveData.best_pve_score(map.window_date, tier)
+	# Best + live rank for this map's board (rank 0 = unplayed). Offline the LocalBackend
+	# reports rank 1 once you've posted a score; Nakama returns the real global rank later.
+	var rinfo: Dictionary = LeaderboardService.trials_rank(_current, tier)
+	var best: int = int(rinfo.get("best", 0))
+	var rank: int = int(rinfo.get("rank", 0))
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(580, 0)
@@ -162,7 +167,7 @@ func _map_card(map) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(info)
 
-	info.add_child(_label("Scale %d" % tier, 22, _tier_color(tier)))
+	info.add_child(_label(LeaderboardService.scale_name(tier), 22, _tier_color(tier)))
 	info.add_child(_label("Rounds %d   ·   Supply %d   ·   Checkpoints %d   ·   Zones %d   ·   Mobs %d" % [
 		map.round_count, map.supply_cap, map.checkpoint_cells.size(), map.bonus_zones.size(), map.mob_count], 14, UiStyle.LABEL_COL))
 
@@ -176,6 +181,21 @@ func _map_card(map) -> Control:
 		best_row.add_child(star)
 	best_row.add_child(_label("Best: %d" % best if best > 0 else "Best: —", 14, Color(1.0, 0.9, 0.5)))
 	info.add_child(best_row)
+
+	# Inline live rank — both informs and is the tap target into the board for this scale +
+	# window (notes/leaderboard_ui_spec.md Surface 4). Em-dash text when unplayed.
+	if rank > 0:
+		var rank_btn := Button.new()
+		rank_btn.text = "#%d  ›" % rank
+		rank_btn.add_theme_font_size_override("font_size", 14)
+		rank_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		UiStyle.style_flat_button(rank_btn, UiStyle.CHIP_BG, 12, UiStyle.CHIP_BORDER, 2, false, 12, 5)
+		rank_btn.add_theme_color_override("font_color", Color("bfe6a3"))
+		rank_btn.pressed.connect(func(): SceneManager.goto_leaderboards(
+			{"category": 0, "window": _current, "tier": tier, "group": "solo"}))
+		info.add_child(rank_btn)
+	else:
+		info.add_child(_label("unplayed", 12, UiStyle.LABEL_COL))
 
 	var play := Button.new()
 	play.text = "Play"

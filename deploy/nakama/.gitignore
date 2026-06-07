@@ -1,0 +1,3 @@
+# Secrets + database data — never commit.
+.env
+pgdata/
