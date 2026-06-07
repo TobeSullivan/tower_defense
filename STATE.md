@@ -35,7 +35,11 @@ Last updated: 2026-06-07
   - **Seeded RNG, ordered draws:** the crit roll (was global `randf()`) now uses one per-match `coordinator.rng`, drawn in board→placement order. Only combat roll, so "all combat rolls seeded" is satisfied.
   - **Tick-based build timer:** `build_ticks_left` is authoritative; `build_time_left` (sec) is just the HUD mirror.
   - **Verified:** `src/tools/sim_harness.gd` (headless, tick-driven) runs a full 13-round match, **byte-identical across 2 runs**, 0 errors, build-timer auto-expiry exercised. Build-phase length proven not to leak into combat outcome.
-  - **Remaining (resim_contract §10, not yet started):** record capture (tick-tagged input log, extend `playtest_log.gd`) · headless re-sim runner + solo-log legality check · wire Trials score / Ranked placement to read from re-sim output. Also pending: wire the server-issued seed into `coordinator.sim_seed` (default 0 today); bot upgrade-pick still uses unseeded `randi()` (`bot_controller.gd:154`) — fine, bot matches are never re-simmed.
+- **CC — record capture + re-sim runner: DONE ✅ (2026-06-07).** resim_contract §2/§4/§7 built and round-trip verified:
+  - **Record capture:** `coordinator.{record_enabled, input_log, map_ref, ruleset_version}` + `log_input(seat, action)` (stamps `sim_tick`) + `make_record()`. Capture sites: `build_controller._place_tower`/`_sell_tower_at_cell` (via `_log_action`), `tower.upgrade`, and `request_start_now`/`set_board_ready` (start/vote_start, §9.2). map_loader wires `sim_seed = map.seed`, `map_ref`, `record_enabled = true`.
+  - **Re-sim runner:** `src/scripts/resim.gd` — rebuilds the map from `map_ref`, builds a headless match (recording off), replays the tick-tagged log through the same board entry points, derives per-board score.
+  - **Round-trip verified** (`sim_harness.gd`, now a capture→re-sim test): a 13-round match with 42 logged actions across rounds (incl. a round-2 placement at tick 3559) re-sims to the **exact same score** (dmg=69962, kills=485). This is the keystone property — the leaderboard number is the re-sim's, and it matches honest play.
+  - **Remaining (resim_contract §10):** solo-log **legality check** (§4.1 — gold/empty-cell/valid-target/supply validation before trusting a submitted log) · **record serialization/submit** (encode to bytes for the Trials submit path; currently an in-memory Dictionary) · **wire outputs** (Trials score-write + Ranked placement read from re-sim output). Also: wire the real server seed into `sim_seed` (today = map.seed); bot upgrade-pick uses unseeded `randi()` (`bot_controller.gd:154`) — fine, bot matches are never re-simmed.
   - **Needs a human:** real interactive playtest to confirm the live (frame-accumulator) path *feels* right — tick logic is exhaustively verified but the in-app UI/fast-forward flow wasn't driven headless.
 - **CC label-pass (mechanical):** Scale 1–5 → Thread/Weave/Tangle/Snarl/Knot across `design/DESIGN_MODES.md` + `design/VISUAL_SYSTEM.md`; remove the Trials "go home?" prompt. (Deliberately not done at wrap to avoid full-rewrite drift.)
 - **CC — campaign rebuild:** five missions per `design/CAMPAIGN.md`; deprecate old `levels/campaign/` `.tres`; build the tutorial-beat system (schema reopen, runtime shape CC's call) + ghost-outline overlay.
@@ -43,10 +47,13 @@ Last updated: 2026-06-07
 - Still needs two humans: a real 2-client cross-network match (targets the end-state stack).
 
 ## Recently touched files
-- `src/scripts/match_coordinator.gd` — fixed-step sim clock + seeded rng + tick build timer
+- `src/scripts/match_coordinator.gd` — fixed-step sim clock + seeded rng + tick build timer + record capture
 - `src/scripts/round_manager.gd` — `BoardState.sim_step` ordered stepping + projectiles array
-- `src/scripts/{tower,spawner,projectile,mob}.gd` — `_process`→`sim_step` (externally driven)
-- `src/tools/sim_harness.gd` — NEW (headless determinism regression harness)
+- `src/scripts/{tower,spawner,projectile,mob}.gd` — `_process`→`sim_step` (externally driven); tower logs upgrades
+- `src/scripts/build_controller.gd` — logs place/sell actions (`_log_action`)
+- `src/scripts/map_loader.gd` — wires `sim_seed`/`map_ref`/`record_enabled` + `_map_ref_for`
+- `src/scripts/resim.gd` — NEW (authoritative re-sim runner)
+- `src/tools/sim_harness.gd` — NEW (determinism + re-sim round-trip regression harness)
 - `src/tools/float_probe.gd` — NEW (§5.1 cross-platform float probe)
 - `.github/workflows/float-probe.yml` — NEW (matrix CI determinism guard)
 - `notes/float_probe_results.md` — NEW (float test result: floats safe ✅)

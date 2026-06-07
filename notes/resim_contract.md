@@ -221,9 +221,16 @@ A build timer + early-start window opens before **every** round, not just the fi
    projectiles→mobs); seeded `coordinator.rng` for crit; tick-based build timer. Regression
    harness `src/tools/sim_harness.gd` — full match byte-identical across runs, 0 errors.
    Open: wire server seed into `coordinator.sim_seed` (default 0 today). See STATE "Next step".
-2. **Record capture** — emit the §2 record (extend `playtest_log.gd`, which already logs
-   the seed) with the tick-tagged input log.
+2. **Record capture** — emit the §2 record with the tick-tagged input log.
+   **→ DONE 2026-06-07.** Lives on `match_coordinator.gd` (`log_input`/`make_record`,
+   `record_enabled`, `map_ref`); capture sites in `build_controller`/`tower`; map_loader
+   wires seed + map_ref. (Built on the coordinator, not `playtest_log.gd` — the coordinator
+   owns `sim_tick`.)
 3. **Re-sim runner** — headless replay of a record → authoritative result; legality check
    for submitted solo logs.
+   **→ PARTIAL 2026-06-07.** `src/scripts/resim.gd` replays a record → per-board score,
+   round-trip verified (live score == re-sim score, `src/tools/sim_harness.gd`). **Still
+   open: the §4.1 legality check** (validate a *submitted* solo log — gold/empty-cell/valid-
+   target/supply — before trusting it) and record serialization for the submit path.
 4. **Wire outputs** — Trials score-write and Ranked placement both read from re-sim output,
-   never from client claims.
+   never from client claims. **(Not started.)**

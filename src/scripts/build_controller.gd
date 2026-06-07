@@ -424,6 +424,7 @@ func _place_tower(cell: Vector2i) -> void:
 	recompute_path()
 	_last_ghost_cell = _NO_CELL  # maze changed — invalidate cached ghost validity
 	emit_signal("towers_changed", towers.size(), max_towers)
+	_log_action({"type": "place", "cell": cell})
 
 func _sell_tower_at_cell(cell: Vector2i) -> bool:
 	for i in range(towers.size() - 1, -1, -1):
@@ -443,8 +444,15 @@ func _sell_tower_at_cell(cell: Vector2i) -> bool:
 			recompute_path()
 			_last_ghost_cell = _NO_CELL  # maze changed — invalidate cached ghost validity
 			emit_signal("towers_changed", towers.size(), max_towers)
+			_log_action({"type": "sell", "cell": cell})
 			return true
 	return false
+
+# Record one applied build action for the re-sim contract (no-op unless the match is
+# recording). Tagged with this board's seat + the coordinator's current sim_tick.
+func _log_action(action: Dictionary) -> void:
+	if round_manager != null and round_manager.coordinator != null:
+		round_manager.coordinator.log_input(seat, action)
 
 # --- Networked relay (local actions out) + remote application (inbound) ---
 

@@ -58,6 +58,35 @@ var build_ticks_left: int = 0
 var sim_seed: int = 0
 var rng := RandomNumberGenerator.new()
 
+# === Match record capture (resim_contract.md §2) ===
+# While recording, every applied build action is appended to input_log tagged with
+# the sim_tick it landed on. The record (make_record) = seed + map_ref + input_log;
+# replaying it headless from the same seed reproduces the match exactly (see
+# scripts/resim.gd). Disabled on a re-sim build so the replay doesn't re-log.
+# Set by map_loader for real matches.
+var record_enabled := false
+var ruleset_version := "0.1"
+var map_ref: Dictionary = {}   # identifies the exact map (§2.1); set by map_loader
+var input_log: Array = []      # ordered [{tick, seat, action:{type, ...}}]
+
+# Append one applied action to the record, tagged with the current sim_tick. Build
+# actions are build-phase-only (nothing sims during build), so the exact within-phase
+# tick never changes the outcome — but it's recorded for audit and round-start derivation.
+func log_input(seat: int, action: Dictionary) -> void:
+	if not record_enabled:
+		return
+	input_log.append({"tick": sim_tick, "seat": seat, "action": action})
+
+# The canonical match record (§2). Deep-copied so later play can't mutate a taken record.
+func make_record() -> Dictionary:
+	return {
+		"seed": sim_seed,
+		"map_ref": map_ref.duplicate(true),
+		"ruleset_version": ruleset_version,
+		"players": boards.size(),
+		"input_log": input_log.duplicate(true),
+	}
+
 # Networked PVP: on a CLIENT the authoritative host owns the clock, so the client's
 # coordinator does NOT self-tick — NetMatch drives it via the net_* methods below.
 # The host (authority) leaves this false and runs the clock normally. `net` is the
@@ -167,6 +196,7 @@ func mob_hp_for_round() -> float:
 func request_start_now() -> void:
 	if phase != "build" or is_pvp:
 		return
+	log_input(0, {"type": "start"})  # solo early start (§9.2); seat 0 (solo = one board)
 	_start_run_phase()
 
 # PVP ready vote. The run starts early once every active board has readied; until
@@ -178,6 +208,7 @@ func set_board_ready(board, value: bool) -> void:
 		return
 	if not is_pvp or phase != "build":
 		return
+	log_input(boards.find(board), {"type": "vote_start", "value": value})  # §9.2
 	if value:
 		_ready_set[board] = true
 	else:

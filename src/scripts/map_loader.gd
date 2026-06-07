@@ -68,6 +68,12 @@ static func build_match(host: Node2D, map, num_boards: int = 1, local_index: int
 	var coordinator := MatchCoordinatorScript.new()
 	coordinator.max_rounds = map.round_count
 	coordinator.is_pvp = (map.mode == MapResourceScript.Mode.PVP)
+	# Determinism + re-sim wiring (set BEFORE add_child so _ready seeds the RNG from it).
+	# One match seed drives both map gen and the combat RNG. record_enabled captures the
+	# tick-tagged input log; a re-sim build turns it back off (see scripts/resim.gd).
+	coordinator.sim_seed = map.seed
+	coordinator.map_ref = _map_ref_for(map)
+	coordinator.record_enabled = true
 	host.add_child(coordinator)
 
 	var boards: Array = []
@@ -154,6 +160,20 @@ static func build_match(host: Node2D, map, num_boards: int = 1, local_index: int
 # Lay boards out in a row with the LOCAL board at world origin (slot 0) so the local
 # player's sim sits at the origin and the existing cell/mouse math is exact; opponents
 # fill the remaining slots in seat order.
+# Identifies the exact map for the re-sim record (§2.1). Generated maps rebuild from
+# (seed, scale_tier, mode, window); authored campaign maps reload by mission index.
+static func _map_ref_for(map) -> Dictionary:
+	if map.mode == MapResourceScript.Mode.CAMPAIGN:
+		return {"kind": "authored", "mission_index": map.mission_index, "tres_version": 1}
+	return {
+		"kind": "generated",
+		"seed": map.seed,
+		"scale_tier": map.scale_tier,
+		"mode": int(map.mode),
+		"window_type": int(map.window_type),
+		"window_date": map.window_date,
+	}
+
 static func _board_offset(index: int, grid_size: Vector2i, local_index: int = 0) -> Vector2:
 	if index == local_index:
 		return Vector2.ZERO

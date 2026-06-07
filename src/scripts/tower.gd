@@ -149,6 +149,11 @@ func upgrade(stat: String) -> void:
 	_update_modulate()
 	if stat == "range":
 		_refresh_range_circle()
+	# Record for the re-sim contract (no-op unless recording). board is the BoardState;
+	# seat lives on its build_controller. Logged with the coordinator's current sim_tick.
+	if board != null and board.coordinator != null:
+		var seat: int = board.build_controller.seat if board.build_controller != null else 0
+		board.coordinator.log_input(seat, {"type": "upgrade", "cell": grid_cell, "stat": stat})
 
 func set_selected(value: bool) -> void:
 	_selected = value
