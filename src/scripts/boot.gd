@@ -18,6 +18,11 @@ func _route() -> void:
 	if "--server" in OS.get_cmdline_user_args():
 		SceneManager.start_dedicated_server()
 		return
+	# Bring the meta backend online (identity + leaderboards) in the background. Non-blocking:
+	# on success it swaps LeaderboardService onto the NakamaBackend; until then surfaces show the
+	# honest LocalBackend view. Only the real client boots through here — test scenes bypass it.
+	if NakamaService.is_configured():
+		NakamaService.connect_backend()
 	if SaveData.is_first_launch():
 		SaveData.mark_first_launch_done()
 		if SceneManager.has_campaign_mission(1):

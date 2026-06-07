@@ -165,7 +165,7 @@ func _build_trials_selectors() -> void:
 	_selectors.add_child(r2)
 
 func _build_ranked_selectors() -> void:
-	var data: Dictionary = LeaderboardService.ranked_ladder(_season)
+	var data: Dictionary = await LeaderboardService.ranked_ladder(_season)
 	var r1 := HBoxContainer.new()
 	r1.add_theme_constant_override("separation", 8)
 	var seasons: Array = data.get("seasons", ["Season 1"])
@@ -202,7 +202,7 @@ func _rebuild_list() -> void:
 		Cat.CAMPAIGN: _render_campaign()
 
 func _render_trials() -> void:
-	var data: Dictionary = LeaderboardService.trials_board(_window, _tier, _group)
+	var data: Dictionary = await LeaderboardService.trials_board(_window, _tier, _group)
 	var entries: Array = data.get("entries", [])
 	if entries.is_empty():
 		_list_box.add_child(_empty_state("No scores on this board yet.", "Be the first — post a run."))
@@ -210,7 +210,7 @@ func _render_trials() -> void:
 	_render_score_rows(entries)
 
 func _render_ranked() -> void:
-	var data: Dictionary = LeaderboardService.ranked_ladder(_season)
+	var data: Dictionary = await LeaderboardService.ranked_ladder(_season)
 	var you = data.get("you", null)
 	if you != null:
 		_list_box.add_child(_ranked_standing(you))
@@ -224,7 +224,7 @@ func _render_ranked() -> void:
 		_render_ranked_rows(band.get("rows", []))
 
 func _render_campaign() -> void:
-	var data: Dictionary = LeaderboardService.campaign_board(_mission)
+	var data: Dictionary = await LeaderboardService.campaign_board(_mission)
 	var entries: Array = data.get("entries", [])
 	if entries.is_empty():
 		_list_box.add_child(_empty_state("No times on this mission's board yet.",

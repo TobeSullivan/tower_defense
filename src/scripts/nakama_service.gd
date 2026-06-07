@@ -81,6 +81,9 @@ func connect_backend() -> bool:
 		session = authed
 
 	_persist_session()
+	# Light up the leaderboard surfaces with real data (LocalBackend → NakamaBackend). Reads
+	# through LeaderboardService are already await-tolerant, so this swap needs no UI changes.
+	LeaderboardService.set_backend(NakamaBackend.new(self))
 	session_ready.emit(session)
 	return true
 

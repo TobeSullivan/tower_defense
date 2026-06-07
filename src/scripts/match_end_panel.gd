@@ -241,7 +241,7 @@ func _populate_placement(damage: int) -> void:
 	var window := int(lb_ctx.get("window", 0))
 	var tier := int(lb_ctx.get("tier", 1))
 	var group := String(lb_ctx.get("group", "solo"))
-	var data: Dictionary = LeaderboardService.trials_placement(window, tier, group, damage)
+	var data: Dictionary = await LeaderboardService.trials_placement(window, tier, group, damage)
 
 	var ctx := _make_label(13, UiStyle.LABEL_COL)
 	ctx.text = String(data.get("context", ""))

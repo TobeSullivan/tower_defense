@@ -128,7 +128,7 @@ static func ranked_tier(value: int) -> Dictionary:
 static func trials_board(window: int, tier: int, group: String) -> Dictionary:
 	var bid := trials_board_id(window, tier, group)
 	var my_score := SaveData.best_pve_score(window_date(window), tier) if group == "solo" else 0
-	var res: Dictionary = backend().fetch_trials(bid, my_score)
+	var res: Dictionary = await backend().fetch_trials(bid, my_score)
 	res["id"] = bid
 	res["reset_text"] = window_reset_text(window)
 	res["my_score"] = my_score
@@ -137,7 +137,7 @@ static func trials_board(window: int, tier: int, group: String) -> Dictionary:
 # Surface 1 (Trials post-match placement): rank + window word + neighborhood ±2.
 static func trials_placement(window: int, tier: int, group: String, my_score: int) -> Dictionary:
 	var bid := trials_board_id(window, tier, group)
-	var res: Dictionary = backend().fetch_trials_neighborhood(bid, my_score, 2)
+	var res: Dictionary = await backend().fetch_trials_neighborhood(bid, my_score, 2)
 	res["window_word"] = window_word(window)
 	res["context"] = "%s · %s · %s" % [
 		WINDOW_IDS.get(window, "daily").to_upper(), scale_name(tier).to_upper(), group.to_upper()]
@@ -148,16 +148,16 @@ static func trials_rank(window: int, tier: int, group: String = "solo") -> Dicti
 	var my_score := SaveData.best_pve_score(window_date(window), tier)
 	if my_score <= 0:
 		return {"best": 0, "rank": 0}
-	var res: Dictionary = backend().fetch_trials_rank(trials_board_id(window, tier, group), my_score)
+	var res: Dictionary = await backend().fetch_trials_rank(trials_board_id(window, tier, group), my_score)
 	return {"best": my_score, "rank": int(res.get("rank", 0))}
 
 # Surface 3 (Ranked): one continuous tiered ladder for a season (schema §4).
 static func ranked_ladder(season: int) -> Dictionary:
-	return backend().fetch_ranked(season)
+	return await backend().fetch_ranked(season)
 
 # Surface 3 (Campaign): the all-time per-mission board.
 static func campaign_board(mission: int) -> Dictionary:
-	return backend().fetch_campaign(mission)
+	return await backend().fetch_campaign(mission)
 
 
 # ============================================================================

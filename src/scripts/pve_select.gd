@@ -137,13 +137,13 @@ func _show_window(window_type: int) -> void:
 	for child in _list_box.get_children():
 		child.queue_free()
 	for map in _windows[window_type]:
-		_list_box.add_child(_map_card(map))
+		_list_box.add_child(await _map_card(map))
 
 func _map_card(map) -> Control:
 	var tier: int = map.scale_tier
 	# Best + live rank for this map's board (rank 0 = unplayed). Offline the LocalBackend
 	# reports rank 1 once you've posted a score; Nakama returns the real global rank later.
-	var rinfo: Dictionary = LeaderboardService.trials_rank(_current, tier)
+	var rinfo: Dictionary = await LeaderboardService.trials_rank(_current, tier)
 	var best: int = int(rinfo.get("best", 0))
 	var rank: int = int(rinfo.get("rank", 0))
 

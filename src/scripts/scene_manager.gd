@@ -208,8 +208,26 @@ func report_match_result(advisory_damage: int) -> void:
 	var damage: int = int(result["score"])
 	if pending_map.mode == MapResourceScript.Mode.CAMPAIGN and pending_map.mission_index > 0:
 		SaveData.record_campaign_medal(pending_map.mission_index, _medal_for(damage))
+		_post_online("campaign", "campaign_m%02d" % pending_map.mission_index, damage)
 	elif pending_map.mode == MapResourceScript.Mode.PVE:
 		SaveData.record_pve_score(pending_map.window_date, pending_map.scale_tier, damage)
+		_post_online("trials", LeaderboardService.trials_board_id(
+			pending_map.window_type, pending_map.scale_tier, "solo"), damage)
+
+# Post the authoritative score to the online board when a Nakama backend is active. Offline
+# (LocalBackend) this is a no-op — boards are write-gated to the submit_score RPC. The match record
+# is encoded SYNCHRONOUSLY (before the first await) so active_coordinator is read while still valid;
+# the network submit is then fire-and-forget (match-end must not block on the network).
+func _post_online(kind: String, board_id: String, score: int) -> void:
+	var be = LeaderboardService.backend()
+	if be == null or not be.has_method("submit"):
+		return
+	var record_b64 := ""
+	var coord = active_coordinator
+	if coord != null and is_instance_valid(coord) and coord.record_enabled:
+		var bytes: PackedByteArray = ResimScript.encode_record(coord.make_record())
+		record_b64 = Marshalls.raw_to_base64(bytes)
+	await be.submit(kind, board_id, score, record_b64)
 
 # Derive the local board's authoritative score by re-simming the captured match record.
 # Returns { score, legal, reason }. Falls back to the advisory value (legal) only when
