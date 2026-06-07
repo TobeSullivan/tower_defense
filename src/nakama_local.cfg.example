@@ -1,0 +1,14 @@
+; Nakama backend connection — LOCAL config template.
+;
+; Copy this file to `nakama_local.cfg` (same folder) and paste the real server key.
+; `nakama_local.cfg` is gitignored; this `.example` is committed as the template.
+; Read at runtime by the NakamaService autoload (src/scripts/nakama_service.gd).
+;
+; The server key is NOT a user secret — it's the shared API key every client ships with
+; (it only gates anonymous API access). It must match NAKAMA_SERVER_KEY in the box .env.
+
+[nakama]
+host="5.78.110.182"
+port=7350
+scheme="http"
+server_key="PUT_SERVER_KEY_HERE"
