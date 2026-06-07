@@ -25,10 +25,12 @@ func _ready() -> void:
 	# Everything else (solo, offline bot-PVP) uses the default seat-0 / bots build.
 	if SceneManager.current_is_multiplayer and SceneManager.transport != null:
 		var boards := MapLoader.build_match(self, map, SceneManager.pending_board_count, SceneManager.pending_local_index, false, SceneManager.pending_player_names)
+		SceneManager.active_coordinator = boards[0].coordinator  # for authoritative re-sim scoring
 		# Bridge the local sim to the host-authoritative protocol (clock + input relay).
 		var nm := NetMatchScript.new()
 		nm.name = "NetMatch"
 		add_child(nm)
 		nm.setup(SceneManager.transport, boards[0].coordinator, boards, SceneManager.pending_local_index, SceneManager.pending_seat_by_peer)
 	else:
-		MapLoader.build_match(self, map, SceneManager.pending_board_count)
+		var boards := MapLoader.build_match(self, map, SceneManager.pending_board_count)
+		SceneManager.active_coordinator = boards[0].coordinator  # for authoritative re-sim scoring

@@ -69,14 +69,27 @@ func _ready() -> void:
 		" dmg=", rb["damage"], " kills=", rb["kills"],
 		" applied=", res["applied"], "/", res["log_size"], " sim_tick=", res["sim_tick"])
 
-	# ---- VERDICT ----
-	var ok: bool = res["over"] and rb["damage"] == live_dmg and rb["kills"] == live_kills \
+	var rt_ok: bool = res["over"] and rb["damage"] == live_dmg and rb["kills"] == live_kills \
 		and res["applied"] == record["input_log"].size()
-	if ok:
-		print("RESULT ✅ ROUND-TRIP OK — re-sim score == live score (dmg=", live_dmg, " kills=", live_kills, ")")
+
+	# ---- WIRING: report_match_result must RECORD the re-sim score, never a client claim ----
+	# Feed it a wildly inflated "advisory" damage and confirm SaveData stores the honest
+	# re-sim score instead (resim_contract §4 — you can't write score = 9,999,999).
+	SaveData.data.pve_best_scores.clear()
+	SceneManager.pending_map = map
+	SceneManager.active_coordinator = coord
+	var fake_claim := 99999999
+	SceneManager.report_match_result(fake_claim)
+	var written: int = SaveData.best_pve_score(map.window_date, map.scale_tier)
+	var wire_ok: bool = written == live_dmg and written != fake_claim
+	print("HARNESS WIRING claim=", fake_claim, " written=", written, " (honest re-sim=", live_dmg, ")")
+
+	# ---- VERDICT ----
+	if rt_ok and wire_ok:
+		print("RESULT ✅ ROUND-TRIP OK (re-sim == live, dmg=", live_dmg, ") + WIRING OK (inflated claim ignored)")
 	else:
-		print("RESULT ❌ MISMATCH — live(dmg=", live_dmg, " kills=", live_kills,
-			") vs resim(dmg=", rb["damage"], " kills=", rb["kills"], ")")
+		print("RESULT ❌ FAIL — rt_ok=", rt_ok, " wire_ok=", wire_ok,
+			" | live=", live_dmg, " resim=", rb["damage"], " written=", written)
 	get_tree().quit()
 
 # Place up to max_n towers on cells flanking the mob path (guaranteed in range so they

@@ -36,12 +36,17 @@ static func run(host: Node2D, record: Dictionary) -> Dictionary:
 		_apply(boards, log[idx])
 		idx += 1
 	var cap := 2000000
-	while not coord.match_over and coord.sim_tick < cap:
+	var ended := false
+	while not coord.match_over and not ended and coord.sim_tick < cap:
 		coord._sim_tick_once()
 		# Apply every action stamped for the tick we just completed, in log order.
 		while idx < log.size() and int(log[idx]["tick"]) == coord.sim_tick:
-			_apply(boards, log[idx])
+			var entry: Dictionary = log[idx]
 			idx += 1
+			if String(entry["action"]["type"]) == "end":
+				ended = true  # bow-out marker — score the partial, stop replaying
+				break
+			_apply(boards, entry)
 
 	var per_board: Array = []
 	for b in boards:

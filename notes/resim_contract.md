@@ -182,6 +182,11 @@ Tick-tagged player actions in the input log:
 - `place_tower(cell)`
 - `sell_tower(cell)`
 - `upgrade(cell, stat)` — one of the 6 stats
+- `end` — **ADDED 2026-06-07 (for review).** Marks a mid-match bow-out tick (Gold reached
+  → "keep my score" / pause-quit) so the re-sim stops there and scores the *partial*,
+  rather than playing the record out to the natural end. A completed match needs no
+  marker (re-sim stops at `match_over`). Implemented in `match_coordinator.record_end_marker`
+  + honored in `resim.gd`. Flagged because it extends this otherwise-locked vocabulary.
 
 **Round start.** Each round opens with a build phase governed by a fixed-duration **build
 timer** (in ticks — see §5.4). The run begins at whichever comes first:
@@ -233,4 +238,9 @@ A build timer + early-start window opens before **every** round, not just the fi
    open: the §4.1 legality check** (validate a *submitted* solo log — gold/empty-cell/valid-
    target/supply — before trusting it) and record serialization for the submit path.
 4. **Wire outputs** — Trials score-write and Ranked placement both read from re-sim output,
-   never from client claims. **(Not started.)**
+   never from client claims.
+   **→ Trials/PVE score-write DONE 2026-06-07.** `SceneManager.report_match_result`
+   re-sims `active_coordinator`'s record and writes THAT to SaveData; the live tally is
+   advisory. Verified: an inflated 99,999,999 claim is ignored, the honest re-sim score is
+   stored (`src/tools/sim_harness.gd`). **Open: Ranked placement** still reads the live
+   coordinator (authoritative offline; networked host-side re-sim is a later MP task).

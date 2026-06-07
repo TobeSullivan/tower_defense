@@ -77,6 +77,13 @@ func log_input(seat: int, action: Dictionary) -> void:
 		return
 	input_log.append({"tick": sim_tick, "seat": seat, "action": action})
 
+# Bow-out (early exit after Gold / pause-quit): mark the tick the run ended so the
+# re-sim stops there and scores the PARTIAL, instead of playing the record out to the
+# natural end. A completed match needs no marker — match_over stops the re-sim. This
+# `end` action extends the §9.2 vocabulary (flagged for review in resim_contract §9.2).
+func record_end_marker() -> void:
+	log_input(0, {"type": "end"})
+
 # The canonical match record (§2). Deep-copied so later play can't mutate a taken record.
 func make_record() -> Dictionary:
 	return {

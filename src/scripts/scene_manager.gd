@@ -8,6 +8,7 @@ extends Node
 
 const MapResourceScript := preload("res://resources/map_resource.gd")
 const MapGeneratorScript := preload("res://scripts/map_generator.gd")
+const ResimScript := preload("res://scripts/resim.gd")
 const EnetTransportScript := preload("res://net/enet_transport.gd")
 const NetProtocolScript := preload("res://net/net_protocol.gd")
 const MatchServerScript := preload("res://net/match_server.gd")
@@ -47,6 +48,12 @@ const CAMPAIGN_MISSIONS := {
 }
 const CAMPAIGN_MISSION_COUNT := 10  # design cap; only authored entries are playable
 
+# The live match's MatchCoordinator, set by main.gd when a real match builds. Used to
+# derive the AUTHORITATIVE score by re-simming its record at match end (resim_contract
+# §4/§8). Not set on the re-sim's own throwaway builds (those go through resim.gd, not
+# main.gd), so re-simming never clobbers this. Cleared on return to home.
+var active_coordinator = null
+
 # Set before a scene change; consumed by the match scene.
 var pending_map = null
 # Number of boards the match scene builds (1 = solo; PVP = PVP_BOARD_COUNT).
@@ -59,6 +66,7 @@ func goto_home() -> void:
 	pending_map = null
 	pending_board_count = 1
 	current_is_multiplayer = false
+	active_coordinator = null  # the match scene (and its coordinator) is about to be freed
 	get_tree().paused = false
 	Engine.time_scale = 1.0  # menus always run at normal speed
 	get_tree().change_scene_to_file(HOME_SCENE)
@@ -178,13 +186,40 @@ func restart_current_match() -> void:
 # Records the result for the current map (campaign medal or PVE score). Storage is
 # best-kept, so calling this with a partial score is always safe — a partial can
 # never beat a full run. PVP records nothing (last-standing, no medals/score).
-func report_match_result(damage: int) -> void:
+func report_match_result(advisory_damage: int) -> void:
 	if pending_map == null:
 		return
+	# resim_contract §4/§8: the score we RECORD is the authoritative re-sim of the match
+	# record, never the live client tally (that's advisory/UX). Locally the re-sim runs
+	# client-side — a stand-in for the server, and a continuous determinism self-check.
+	var damage := _authoritative_score(advisory_damage)
 	if pending_map.mode == MapResourceScript.Mode.CAMPAIGN and pending_map.mission_index > 0:
 		SaveData.record_campaign_medal(pending_map.mission_index, _medal_for(damage))
 	elif pending_map.mode == MapResourceScript.Mode.PVE:
 		SaveData.record_pve_score(pending_map.window_date, pending_map.scale_tier, damage)
+
+# Derive the local board's authoritative score by re-simming the captured match record.
+# Falls back to the advisory value only when there's no record to replay (e.g. a scene
+# opened directly with no coordinator). A mid-match bow-out logs an `end` marker first so
+# the re-sim scores the partial, not the played-out remainder.
+func _authoritative_score(advisory: int) -> int:
+	var coord = active_coordinator
+	if coord == null or not is_instance_valid(coord) or not coord.record_enabled:
+		return advisory
+	if not coord.match_over:
+		coord.record_end_marker()
+	var record: Dictionary = coord.make_record()
+	var host := Node2D.new()
+	add_child(host)
+	var res: Dictionary = ResimScript.run(host, record)
+	host.queue_free()
+	var rboards: Array = res.get("boards", [])
+	if rboards.is_empty():
+		return advisory
+	var score := int(rboards[0]["damage"])  # solo = seat 0
+	if score != advisory:
+		push_warning("Re-sim score %d differs from live %d — determinism check (recording re-sim)." % [score, advisory])
+	return score
 
 func _medal_for(damage: int) -> String:
 	if pending_map == null:
