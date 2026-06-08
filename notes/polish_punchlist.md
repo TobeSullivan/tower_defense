@@ -22,7 +22,7 @@ Source: 2026-06-07 in-game review (Tobe). These are CC tasks unless noted. Items
 8. **Build mode — out of supply.** When the player runs out of supply, automatically **stop the tower hover/placement cursor** (don't leave a placement ghost you can't afford to place).
 
 9. **Campaign rework + hand-authoring editor.**
-   - Tooltips/tips currently behave as **toasts that auto-dismiss** before they can be read. Make them **user-dismissable only** (stay until the player closes them).
-   - The **tower ghosts teach a poor maze** — the example build is bad mazing. Needs re-authored example mazes.
-   - **Mission 1 has 0 checkpoints; it must have 1.** (Bug in the current `mission_01.tres`.)
-   - Build an **interactive grid editor** (HTML) at the locked **25×16** size so Tobe can hand-author each campaign map by coloring cells: board / obstacle / tower-ghost / checkpoint (ordered), plus one **resizable circle** for bonus zones (type + magnitude; radius follows the locked inverse-size formula). Exports a spec CC turns into `MapResource` `.tres`. Should validate: a legal entry→checkpoints→exit path exists, checkpoint count > 0, entry + exit present. **Unblocked now that the board is 25×16.**
+   - ✅ **Grid editor BUILT** (`notes/tools/map_editor.html`, 2026-06-08) — 25×16, paints board / obstacle / tower-ghost / ordered checkpoints + entry/exit + resizable bonus-zone circles (radius from the locked formula), validates a legal entry→checkpoints→exit path, imports an existing `.tres` losslessly (beats preserved), saves real `mission_NN.tres`.
+   - ✅ **M1–M5 re-authored + tutorial copy reviewed** (2026-06-08) — new hand-built mazes, reviewed beat copy (undead framing, no em-dashes, 1/2/3-star not medals, several beats cut), correct names. Mission 1 now has its 1 checkpoint (the old 0-checkpoint bug is moot).
+   - ⏳ **CC follow-ups** (see `STATE.md` → Next step): ghost outline clears when the player builds off-suggestion; M3 outline rides its single load beat; keep threshold fields (1/2/3-star, not bronze/silver/gold); M1 win flow = leave-only → next map / Trials / Ranked; `grid_size` default → 25×16; anchor resolve check in the new HUD.
+   - ⏳ **Tooltips/tips dismissable-only** — still open (CC): make tutorial callouts user-dismissable, not auto-dismiss toasts.

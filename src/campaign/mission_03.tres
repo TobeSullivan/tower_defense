@@ -1,6 +1,13 @@
 [gd_resource type="Resource" script_class="MapResource" format=3]
 
+[ext_resource type="Script" path="res://resources/tutorial_beat.gd" id="1_beat"]
 [ext_resource type="Script" path="res://resources/map_resource.gd" id="3_map"]
+
+[sub_resource type="Resource" id="Beat_load"]
+script = ExtResource("1_beat")
+trigger = "on_mission_load"
+text = "With three waypoints, the mazes get more complex. We've given you another outline, but this time it's your choice whether to follow it."
+ghost_cells = Array[Vector2i]([Vector2i(19, 2), Vector2i(20, 2), Vector2i(21, 2), Vector2i(22, 2), Vector2i(23, 2), Vector2i(10, 3), Vector2i(11, 3), Vector2i(12, 3), Vector2i(13, 3), Vector2i(15, 3), Vector2i(16, 3), Vector2i(17, 3), Vector2i(17, 4), Vector2i(18, 4), Vector2i(19, 4), Vector2i(20, 4), Vector2i(21, 4), Vector2i(22, 4), Vector2i(23, 4), Vector2i(24, 4)])
 
 [resource]
 script = ExtResource("3_map")
@@ -19,8 +26,6 @@ bronze_threshold = 3000
 silver_threshold = 6000
 gold_threshold = 9000
 mission_index = 3
-mission_name = "Three Points"
-mission_description = "The core twist: enemies don't die. Build a short maze and farm damage."
-tutorial_beats = []
-# build-phase ghost_cells (CC: drop into the on_build_phase_start TutorialBeat):
-# ghost_cells = Array[Vector2i]([Vector2i(19, 2), Vector2i(20, 2), Vector2i(21, 2), Vector2i(22, 2), Vector2i(23, 2), Vector2i(10, 3), Vector2i(11, 3), Vector2i(12, 3), Vector2i(13, 3), Vector2i(15, 3), Vector2i(16, 3), Vector2i(17, 3), Vector2i(17, 4), Vector2i(18, 4), Vector2i(19, 4), Vector2i(20, 4), Vector2i(21, 4), Vector2i(22, 4), Vector2i(23, 4), Vector2i(24, 4)])
+tutorial_beats = [SubResource("Beat_load")]
+mission_name = "Switchbacks"
+mission_description = "Three waypoints, longer routes. The outline is optional now, the maze is yours."

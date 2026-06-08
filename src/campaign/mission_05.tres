@@ -1,7 +1,13 @@
 [gd_resource type="Resource" script_class="MapResource" format=3]
 
+[ext_resource type="Script" path="res://resources/tutorial_beat.gd" id="1_beat"]
 [ext_resource type="Script" path="res://resources/zone_definition.gd" id="2_zone"]
 [ext_resource type="Script" path="res://resources/map_resource.gd" id="3_map"]
+
+[sub_resource type="Resource" id="Beat_load"]
+script = ExtResource("1_beat")
+trigger = "on_mission_load"
+text = "No more training. This map has everything, checkpoints, zones, a full run, but it's hand-built, not random, so you can learn it. This is what a real match feels like."
 
 [sub_resource type="Resource" id="Zone_0"]
 script = ExtResource("2_zone")
@@ -44,8 +50,6 @@ bronze_threshold = 30000
 silver_threshold = 60000
 gold_threshold = 90000
 mission_index = 5
-mission_name = "Graduation"
-mission_description = "The core twist: enemies don't die. Build a short maze and farm damage."
-tutorial_beats = []
-# build-phase ghost_cells (CC: drop into the on_build_phase_start TutorialBeat):
-# ghost_cells = Array[Vector2i]([])
+tutorial_beats = [SubResource("Beat_load")]
+mission_name = "The Gauntlet"
+mission_description = "Everything at once on a hand-built map. The closest thing to a real match."

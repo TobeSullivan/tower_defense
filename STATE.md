@@ -1,5 +1,7 @@
 # State — Wend
-Last updated: 2026-06-07
+Last updated: 2026-06-08
+
+> **Session wrap 2026-06-08 (design — campaign map editor + tutorial copy):** Built a hand-authoring **map editor** (`notes/tools/map_editor.html`) at the locked **25×16** — paints entry / exit / ordered checkpoints / obstacles / tower-ghosts + bonus zones (radius auto-derived from the locked `radius_for_magnitude` formula), validates a legal entry→checkpoints→exit path (4-dir BFS), imports an existing `.tres` **losslessly** (tutorial beats preserved verbatim, build-phase ghost geometry rewritten from the painted cells), and **saves real `mission_NN.tres`** for batch-push. Closes the editor half of polish item #9. **Heads-up:** the first author pass (pushed `b2b8e58`) was done WITHOUT importing, so it wiped `tutorial_beats` on all five and defaulted names/descriptions — now **fixed**. All 5 missions rebuilt: reviewed tutorial copy (walked beat-by-beat with Tobe — undead framing, no em-dashes anywhere, medals→leaderboard/stars language, several beats cut), correct names (**First Contact · The Long Way · Switchbacks · Hot Spots · The Gauntlet**), real descriptions, layouts + zones + ghost outlines preserved. **Six CC follow-ups under Next step.** Editor's repo home: `notes/tools/map_editor.html`.
 
 > **Session wrap 2026-06-07 (design — in-match HUD):** full in-match layout designed + signed off, locked in `design/INMATCH_HUD.md`. Reserved **right rail** (status / score-or-standing / buttons), **maximized board** — cell count is now **25×16** (derived once at the 1080p reference using the current on-screen cell size + a 280px rail; locked **universal**, other resolutions scale + center the same grid), and **tower info as a contextual overlay** over the board (not a reserved dock), hide-button removed, Sell label bare. Reference mock: `notes/mockups/inmatch_assembly.html`. **This unblocks the campaign rebuild + the map editor** (board size was the dependency — editor authors against 25×16). Also recorded a 9-item polish/bug punch-list → `notes/polish_punchlist.md` (CC tasks). **Juice pass parked** — Tobe is reframing the throughput / Persona-Atlus direction himself before any spec is built; do not treat Claude's earlier framing as locked.
 
@@ -53,6 +55,15 @@ On the box `5.78.110.182` (CPX31/`hil`): **Nakama** (`:7350` — device-auth ide
 **Design context (drove the build):** session-4 specs `notes/matchmaking_orchestration.md` (orchestration spine — queue → forming lobby, unanimous-of-present vote 4–7, auto-at-8, floor 4, speed-beats-quality, crash=void), `design/CAMPAIGN.md`, `design/DESIGN_MODES.md`; session-3 spine `notes/resim_contract.md`, `leaderboard_schema.md`, `ghost_ladder.md`, `leaderboard_ui_spec.md`. Identity: device-auth now, Steam later (one identity, display name = Steam persona).
 
 ## Next step
+
+### ▶ NEXT — campaign tutorial CC follow-ups (from the 2026-06-08 copy pass)
+After the 5 rebuilt `src/campaign/mission_*.tres` land (they restore `tutorial_beats` + correct names/descriptions; verify with `src/tools/campaign_verify.gd` headless — parses all 5, legal-maze check, director build):
+1. **Ghost outline clears on deviation** — if the player builds outside the suggested maze, the remaining ghost outline disappears. General build-guide behavior across all outline missions (M1/M2/M4) and M3.
+2. **M3 outline rides the load beat** — M3 has exactly ONE message (`on_mission_load`) which also carries `ghost_cells`; render that outline during the build phase even though the trigger is load-time. (M3 deliberately has no second beat.)
+3. **Thresholds stay, naming only** — keep the `bronze/silver/gold_threshold` fields (they ARE the 1/2/3-star cutoffs); player-facing UI says "1–3 stars", never bronze/silver/gold. Optional cosmetic rename to `star_1/2/3_threshold`.
+4. **M1 win flow** — the mission-end panel should be leave-only → next map / Trials / Ranked (no medal screen). M1 Beat 7 copy = "For now, move on to the next map."
+5. **`grid_size` default → 25×16** in `src/resources/map_resource.gd` (default is still 25×14; the campaign `.tres` now set it explicitly, generated PVE/PVP maps should match).
+6. **Anchor check** — the beat anchors (`score`, `respawn`, `tower`, `board`) still resolve in the new right-rail HUD (playtest, not auto-testable).
 
 ### ▶▶ NEXT SESSION — the human through-line (Steam-gated)
 The MP spine + ranked scoring are built and every link is verified individually; what's left needs the live loop and people:
@@ -158,6 +169,8 @@ The anti-cheat spine is now complete for solo Trials/PVE (determinism → record
 - Still needs two humans: a real 2-client cross-network match (targets the end-state stack).
 
 ## Recently touched files
+- `notes/tools/map_editor.html` — NEW (25×16 hand-authoring map editor: paint roles + zones, lossless `.tres` import, saves `mission_NN.tres`; resolves polish #9 editor sub-task)
+- `src/campaign/mission_01–05.tres` — REWRITTEN this session (Tobe's editor layouts + zones + ghost outlines, with reviewed tutorial beats restored, correct names/descriptions). Names: First Contact · The Long Way · Switchbacks · Hot Spots · The Gauntlet
 - `design/INMATCH_HUD.md` — NEW (in-match HUD layout: reserved rail + maximized 25×16 board + contextual tower overlay; signed off 2026-06-07)
 - `notes/mockups/inmatch_assembly.html` — NEW (1080p reference mock of the locked layout)
 - `notes/polish_punchlist.md` — NEW (9-item polish/bug list from the 2026-06-07 review; CC tasks)
@@ -199,5 +212,7 @@ The anti-cheat spine is now complete for solo Trials/PVE (determinism → record
 ## Open questions / blocked on
 **Board count LOCKED 25×16 (2026-06-07)** — replaces 25×14; universal, derived off 1080p, scale+center elsewhere. **Campaign rebuild + map editor now unblocked** (board size was the dependency); next-session candidate is the hand-authoring grid editor (color cells: board / obstacle / tower-ghost / checkpoint, + resizable zone circle) → see `notes/polish_punchlist.md` item 9. Minor open from the HUD pass: Speed button during build = present-but-disabled vs empty-until-run. Stat-row [+] / star icons are still placeholder (real-asset gap). Tower-info overlay-vs-in-rail is a live implementation tradeoff (it fits in the rail's lower gap) — locked as overlay, but in-rail is a fair alternative at build time.
 Full per-item status in `notes/open_items.md`. Active design: juice (parked, Tobe reframing) · season-pass numbers · Steam closed-beta mechanics · GTM.
+
+**Polish #9 update (2026-06-08):** the hand-authoring grid editor is BUILT (`notes/tools/map_editor.html`) and the 5 campaign maps are re-authored with reviewed tutorial copy. Remaining #9 sub-items are CC tasks (see the six follow-ups under Next step). **Medals clarified:** there is no bronze/silver/gold naming — it's **1/2/3 stars**; the `*_threshold` fields stay (they're the star cutoffs), only the labels change. Tutorial copy already avoids medal words.
 
 **Steam (ops):** identity verification pending (2–7 biz days, started 2026-06-07) — blocks App ID + Playtest creation. Confirm entity type chosen at registration. Decide confidential-keys vs. public-Coming-Soon for the Playtest.

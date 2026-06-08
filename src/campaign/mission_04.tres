@@ -1,7 +1,20 @@
 [gd_resource type="Resource" script_class="MapResource" format=3]
 
+[ext_resource type="Script" path="res://resources/tutorial_beat.gd" id="1_beat"]
 [ext_resource type="Script" path="res://resources/zone_definition.gd" id="2_zone"]
 [ext_resource type="Script" path="res://resources/map_resource.gd" id="3_map"]
+
+[sub_resource type="Resource" id="Beat_load"]
+script = ExtResource("1_beat")
+trigger = "on_mission_load"
+text = "These circles are zones. A tower inside one hits harder, an enemy crossing one gets weaker. Always bend your maze to cover them."
+
+[sub_resource type="Resource" id="Beat_build"]
+script = ExtResource("1_beat")
+trigger = "on_build_phase_start"
+text = "We've sketched one option here. Follow it or go your own way."
+anchor = "board"
+ghost_cells = Array[Vector2i]([Vector2i(9, 1), Vector2i(11, 1), Vector2i(14, 1), Vector2i(9, 2), Vector2i(11, 2), Vector2i(14, 2), Vector2i(17, 2), Vector2i(18, 2), Vector2i(19, 2), Vector2i(9, 3), Vector2i(14, 3), Vector2i(16, 3), Vector2i(21, 3), Vector2i(9, 4), Vector2i(12, 4), Vector2i(14, 4), Vector2i(17, 4), Vector2i(18, 4), Vector2i(19, 4), Vector2i(20, 4), Vector2i(9, 5), Vector2i(11, 5), Vector2i(12, 5), Vector2i(14, 5), Vector2i(16, 5), Vector2i(11, 6), Vector2i(12, 6), Vector2i(16, 6), Vector2i(10, 7), Vector2i(13, 7), Vector2i(7, 8), Vector2i(7, 9)])
 
 [sub_resource type="Resource" id="Zone_0"]
 script = ExtResource("2_zone")
@@ -44,8 +57,6 @@ bronze_threshold = 3000
 silver_threshold = 6000
 gold_threshold = 9000
 mission_index = 4
-mission_name = "Zones"
-mission_description = "The core twist: enemies don't die. Build a short maze and farm damage."
-tutorial_beats = []
-# build-phase ghost_cells (CC: drop into the on_build_phase_start TutorialBeat):
-# ghost_cells = Array[Vector2i]([Vector2i(9, 1), Vector2i(11, 1), Vector2i(14, 1), Vector2i(9, 2), Vector2i(11, 2), Vector2i(14, 2), Vector2i(17, 2), Vector2i(18, 2), Vector2i(19, 2), Vector2i(9, 3), Vector2i(14, 3), Vector2i(16, 3), Vector2i(21, 3), Vector2i(9, 4), Vector2i(12, 4), Vector2i(14, 4), Vector2i(17, 4), Vector2i(18, 4), Vector2i(19, 4), Vector2i(20, 4), Vector2i(9, 5), Vector2i(11, 5), Vector2i(12, 5), Vector2i(14, 5), Vector2i(16, 5), Vector2i(11, 6), Vector2i(12, 6), Vector2i(16, 6), Vector2i(10, 7), Vector2i(13, 7), Vector2i(7, 8), Vector2i(7, 9)])
+tutorial_beats = [SubResource("Beat_load"), SubResource("Beat_build")]
+mission_name = "Hot Spots"
+mission_description = "Bonus zones buff your towers and weaken the enemy. Build your maze to cover them."

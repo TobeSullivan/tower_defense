@@ -1,6 +1,48 @@
 [gd_resource type="Resource" script_class="MapResource" format=3]
 
+[ext_resource type="Script" path="res://resources/tutorial_beat.gd" id="1_beat"]
 [ext_resource type="Script" path="res://resources/map_resource.gd" id="3_map"]
+
+[sub_resource type="Resource" id="Beat_load"]
+script = ExtResource("1_beat")
+trigger = "on_mission_load"
+text = "These are the undead. They can't be killed, only knocked down, and they always get back up. So forget defense. Your only goal is damage, and the longer their path winds through your towers, the more you rack up."
+blocking = true
+
+[sub_resource type="Resource" id="Beat_build"]
+script = ExtResource("1_beat")
+trigger = "on_build_phase_start"
+text = "Place towers on the glowing tiles. Don't just line them up, bend the path. Every extra step the enemy takes is another second your towers get to shoot."
+anchor = "board"
+ghost_cells = Array[Vector2i]([Vector2i(12, 7), Vector2i(13, 7), Vector2i(9, 8), Vector2i(11, 8), Vector2i(14, 8), Vector2i(9, 9), Vector2i(12, 9), Vector2i(14, 9), Vector2i(10, 10), Vector2i(14, 10)])
+
+[sub_resource type="Resource" id="Beat_first"]
+script = ExtResource("1_beat")
+trigger = "on_first_tower_placed"
+text = "Tap any tower to upgrade it. Stronger towers deal more damage."
+anchor = "tower"
+
+[sub_resource type="Resource" id="Beat_start"]
+script = ExtResource("1_beat")
+trigger = "on_round_start"
+text = "Here they come. Watch what happens when one falls."
+
+[sub_resource type="Resource" id="Beat_kill"]
+script = ExtResource("1_beat")
+trigger = "on_first_kill"
+text = "See? It's already back and walking again. You're not killing them, you're farming damage. That score is the only thing that matters."
+anchor = "respawn"
+
+[sub_resource type="Resource" id="Beat_rend"]
+script = ExtResource("1_beat")
+trigger = "on_round_end"
+text = "That's your score. The only goal is a bigger number, and the real game is where you land on the leaderboard. For now, keep going."
+anchor = "score"
+
+[sub_resource type="Resource" id="Beat_win"]
+script = ExtResource("1_beat")
+trigger = "on_win"
+text = "For now, move on to the next map."
 
 [resource]
 script = ExtResource("3_map")
@@ -19,8 +61,6 @@ bronze_threshold = 1000
 silver_threshold = 2000
 gold_threshold = 3000
 mission_index = 1
+tutorial_beats = [SubResource("Beat_load"), SubResource("Beat_build"), SubResource("Beat_first"), SubResource("Beat_start"), SubResource("Beat_kill"), SubResource("Beat_rend"), SubResource("Beat_win")]
 mission_name = "First Contact"
-mission_description = "The core twist: enemies don't die. Build a short maze and farm damage."
-tutorial_beats = []
-# build-phase ghost_cells (CC: drop into the on_build_phase_start TutorialBeat):
-# ghost_cells = Array[Vector2i]([Vector2i(12, 7), Vector2i(13, 7), Vector2i(9, 8), Vector2i(11, 8), Vector2i(14, 8), Vector2i(9, 9), Vector2i(12, 9), Vector2i(14, 9), Vector2i(10, 10), Vector2i(14, 10)])
+mission_description = "The core twist: the undead can't be killed. Build a maze and farm damage."

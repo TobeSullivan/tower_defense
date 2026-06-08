@@ -1,0 +1,498 @@
+<!--
+  Wend — Campaign Map Editor
+  Hand-author M1–M5 layouts on the locked 25x16 board. Saves real mission_NN.tres files.
+
+  Workflow:
+    1. Import an existing src/campaign/mission_NN.tres (file or paste) to edit it.
+       Tutorial beats (the narrative text) are preserved verbatim; you edit layout + maze.
+    2. Or start fresh (tutorial_beats exported empty for CC to fill).
+    3. Save .tres -> lands in Downloads as mission_NN.tres -> batch-push to the repo.
+
+  Cell roles -> MapResource:
+    entry -> entry_cell (1) | exit -> exit_cell (1) | checkpoint -> checkpoint_cells (1-3, ordered)
+    obstacle -> obstacle_cells (1x1) | tower-ghost -> the build-phase TutorialBeat.ghost_cells
+  Bonus zone -> ZoneDefinition {type, cell, magnitude}; radius derived, not authored.
+  Path check: 4-dir BFS entry -> cp1 -> ... -> exit through non-obstacle cells.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:#14180e; --panel:#2a3322; --panel-br:#161c0f; --surface:#323d2c; --surface-br:#1a2012;
+    --chip:#39402c; --chip-br:#23170d; --gold:#b38e2c; --gold-br:#5e4710; --green:#5fbe38;
+    --green-br:#2c5a18; --terra:#b04a2a; --terra-br:#5e2310; --sage:#b9c7a4; --txt:#f3f0e6;
+    --obstacle:#4a4034; --ghost:#6fae9a; --board:#3a4630; --grid-line:rgba(0,0,0,0.32);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:'IBM Plex Mono',monospace;
+    background-image:radial-gradient(circle at 18% 12%,rgba(179,142,44,.06),transparent 42%),
+      radial-gradient(circle at 85% 88%,rgba(176,74,42,.05),transparent 45%); }
+  .wrap { display:flex; gap:18px; padding:18px; align-items:flex-start; min-height:100vh; }
+  .col-tools { width:232px; flex:0 0 232px; } .col-stage { flex:1 1 auto; min-width:0; }
+  .col-out { width:368px; flex:0 0 368px; }
+  h1 { font-family:'Fredoka',sans-serif; font-weight:600; font-size:22px; margin:0 0 2px; letter-spacing:.3px; }
+  .sub { font-size:11px; color:var(--sage); margin:0 0 16px; }
+  h2 { font-family:'Fredoka',sans-serif; font-weight:600; font-size:13px; text-transform:uppercase;
+    letter-spacing:1.2px; color:var(--sage); margin:18px 0 8px; }
+  .panel { background:var(--panel); border:1px solid var(--panel-br); border-radius:12px; padding:14px;
+    box-shadow:0 2px 0 var(--panel-br); } .panel + .panel { margin-top:14px; }
+  .tool { display:flex; align-items:center; gap:10px; width:100%; background:var(--surface);
+    border:1px solid var(--surface-br); border-radius:9px; padding:9px 11px; margin-bottom:7px; cursor:pointer;
+    color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:left;
+    transition:transform .06s,border-color .1s; }
+  .tool:hover { transform:translateY(-1px); }
+  .tool.active { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset; }
+  .swatch { width:16px; height:16px; border-radius:4px; flex:0 0 16px; border:1px solid rgba(0,0,0,.4); }
+  .tool .key { margin-left:auto; font-size:10px; color:var(--sage); opacity:.75; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:7px 0; gap:8px; }
+  .row label { font-size:11.5px; color:var(--sage); }
+  input[type=text],input[type=number],textarea,select { background:var(--bg); border:1px solid var(--surface-br);
+    border-radius:7px; color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:6px 8px; }
+  input[type=number] { width:72px; } input[type=text] { width:100%; }
+  textarea { width:100%; resize:vertical; }
+  .stage-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+  .coord { font-size:12px; color:var(--gold); font-weight:600; }
+  .canvas-shell { display:inline-block; background:var(--surface); border:1px solid var(--surface-br);
+    border-radius:14px; padding:12px; box-shadow:0 3px 0 var(--surface-br); }
+  canvas { display:block; border-radius:6px; cursor:crosshair; }
+  .hint { font-size:11px; color:var(--sage); margin-top:10px; line-height:1.6; }
+  .hint b { color:var(--txt); font-weight:600; }
+  .valid { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; padding:9px 11px;
+    border-radius:9px; margin-bottom:8px; }
+  .valid.ok { background:rgba(95,190,56,.14); border:1px solid var(--green-br); color:#aee389; }
+  .valid.bad { background:rgba(176,74,42,.16); border:1px solid var(--terra-br); color:#f0a98e; }
+  .valid.warn { background:rgba(179,142,44,.14); border:1px solid var(--gold-br); color:#e6cd8a; }
+  .vmsg { font-size:11px; color:var(--sage); margin:4px 0 0; line-height:1.55; font-weight:400; }
+  .btn { font-family:'Fredoka',sans-serif; font-weight:600; font-size:12px; border-radius:9px; padding:9px 12px;
+    cursor:pointer; color:var(--txt); border:1px solid var(--surface-br); background:var(--surface); transition:transform .06s; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn.gold { background:var(--gold); border-color:var(--gold-br); color:#2a1f06; }
+  .btn.green { background:var(--green); border-color:var(--green-br); color:#0e2207; }
+  .btn.terra { background:var(--terra); border-color:var(--terra-br); }
+  .btnrow { display:flex; gap:8px; flex-wrap:wrap; }
+  .out-tabs { display:flex; gap:6px; margin-bottom:10px; }
+  .out-tab { flex:1; text-align:center; font-size:11px; padding:7px; border-radius:8px; cursor:pointer;
+    background:var(--surface); border:1px solid var(--surface-br); color:var(--sage); }
+  .out-tab.active { background:var(--chip); border-color:var(--gold); color:var(--txt); }
+  pre.out { background:var(--bg); border:1px solid var(--surface-br); border-radius:9px; padding:12px; font-size:11px;
+    line-height:1.5; max-height:320px; overflow:auto; white-space:pre; color:#cfe0b8; margin:0 0 10px; }
+  .zitem { display:flex; align-items:center; gap:8px; font-size:11px; padding:6px 8px; background:var(--surface);
+    border:1px solid var(--surface-br); border-radius:7px; margin-bottom:6px; }
+  .zitem .zdot { width:12px; height:12px; border-radius:50%; flex:0 0 12px; }
+  .zitem select,.zitem input { padding:3px 5px; font-size:11px; } .zitem input[type=number] { width:52px; }
+  .zitem .zx { margin-left:auto; cursor:pointer; color:var(--terra); font-weight:700; }
+  .tiny { font-size:10.5px; color:var(--sage); opacity:.85; }
+  .badge { display:inline-block; font-size:10px; padding:2px 7px; border-radius:6px; background:var(--chip);
+    border:1px solid var(--chip-br); color:var(--sage); margin-left:6px; }
+  .badge.live { background:rgba(95,190,56,.18); border-color:var(--green-br); color:#aee389; }
+</style>
+
+<div class="wrap">
+  <div class="col-tools">
+    <h1>Wend Map Editor</h1>
+    <p class="sub">25 × 16 · campaign layout authoring</p>
+    <div class="panel">
+      <h2 style="margin-top:0">Paint</h2>
+      <button class="tool" data-tool="board"><span class="swatch" style="background:var(--board)"></span>Board / erase<span class="key">1</span></button>
+      <button class="tool" data-tool="entry"><span class="swatch" style="background:var(--green)"></span>Entry<span class="key">2</span></button>
+      <button class="tool" data-tool="exit"><span class="swatch" style="background:var(--terra)"></span>Exit<span class="key">3</span></button>
+      <button class="tool active" data-tool="checkpoint"><span class="swatch" style="background:var(--gold)"></span>Checkpoint<span class="key">4</span></button>
+      <button class="tool" data-tool="obstacle"><span class="swatch" style="background:var(--obstacle)"></span>Obstacle<span class="key">5</span></button>
+      <button class="tool" data-tool="ghost"><span class="swatch" style="background:var(--ghost)"></span>Tower-ghost<span class="key">6</span></button>
+      <button class="tool" data-tool="zone"><span class="swatch" style="background:linear-gradient(135deg,#b04a2a,#2f7bb0)"></span>Bonus zone<span class="key">Z</span></button>
+      <p class="tiny" style="margin:8px 0 0">Drag to paint obstacle / ghost / board. Right-click = erase. Checkpoints number in click order; click one to remove.</p>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Mission params</h2>
+      <div class="row"><label>Index</label><input type="number" id="p_index" value="1" min="1" max="5"></div>
+      <div class="row"><label>Seed</label><input type="number" id="p_seed" value="1"></div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:4px"><label>Name</label><input type="text" id="p_name" value="First Contact"></div>
+      <div class="row" style="flex-direction:column;align-items:stretch;gap:4px"><label>Description</label><textarea id="p_desc" rows="2">The core twist: enemies don't die. Build a short maze and farm damage.</textarea></div>
+      <div class="row"><label>Supply cap</label><input type="number" id="p_supply" value="10"></div>
+      <div class="row"><label>Rounds</label><input type="number" id="p_rounds" value="5"></div>
+      <div class="row"><label>Mob count</label><input type="number" id="p_mobs" value="6"></div>
+      <div class="row"><label>Bronze</label><input type="number" id="p_bronze" value="2000"></div>
+      <div class="row"><label>Silver</label><input type="number" id="p_silver" value="4000"></div>
+      <div class="row"><label>Gold</label><input type="number" id="p_gold" value="7000"></div>
+    </div>
+  </div>
+
+  <div class="col-stage">
+    <div class="stage-head">
+      <h2 style="margin:0">Board <span class="tiny" style="text-transform:none;letter-spacing:0">— x: column 0–24, y: row 0–15</span><span id="srcBadge" class="badge">fresh</span></h2>
+      <span class="coord" id="coord">—</span>
+    </div>
+    <div class="canvas-shell"><canvas id="grid" width="800" height="512"></canvas></div>
+    <p class="hint"><b>Entry</b> & <b>exit</b> are single cells. <b>Checkpoints</b> are ordered (mob walks entry → 1 → 2 → 3 → exit). <b>Tower-ghost</b> cells are the build-phase teaching maze. Bonus-zone size is computed from magnitude — weak = wide, strong = tight.</p>
+  </div>
+
+  <div class="col-out">
+    <div class="panel">
+      <h2 style="margin-top:0">File</h2>
+      <div class="btnrow">
+        <button class="btn green" id="saveTresBtn">Save .tres</button>
+        <button class="btn gold" id="importFileBtn">Import .tres / .json…</button>
+        <button class="btn" id="saveJsonBtn">Save .json</button>
+        <button class="btn terra" id="clearBtn">Clear</button>
+      </div>
+      <input type="file" id="fileIn" accept=".tres,.json,text/plain" style="display:none">
+      <p class="tiny" id="fileNote" style="margin:8px 0 0">Import an existing <b>mission_NN.tres</b> to edit it — its tutorial text is preserved. Save .tres downloads <b>mission_NN.tres</b> (NN = index) to push to the repo.</p>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Validation</h2>
+      <div id="valBox" class="valid ok">✓ Valid</div>
+      <div id="valMsg" class="vmsg"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Bonus zones</h2>
+      <div id="zlist"></div>
+      <p class="tiny" id="znote" style="margin:6px 0 0">Pick the Bonus-zone tool, then click the board to drop one.</p>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Preview</h2>
+      <div class="out-tabs">
+        <div class="out-tab active" data-out="tres">.tres</div>
+        <div class="out-tab" data-out="ghost">ghost_cells</div>
+        <div class="out-tab" data-out="json">json</div>
+      </div>
+      <pre class="out" id="outBox"></pre>
+      <button class="btn" id="copyBtn">Copy preview</button>
+      <p class="tiny" style="margin:8px 0 0">If a browser blocks the download, Copy here and paste into the file by hand.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const COLS=25, ROWS=16, CELL=32;
+  const css=(n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const ZONE_TYPES=["damage","attack_speed","range","slow"];          // == ZoneDefinition.Type order
+  const ZONE_LABEL={damage:"Damage",attack_speed:"Atk Speed",range:"Range",slow:"Slow"};
+  const ZONE_COLOR={damage:"#b04a2a",attack_speed:"#b38e2c",range:"#5fbe38",slow:"#2f7bb0"};
+
+  const blank=()=>Array.from({length:ROWS},()=>Array.from({length:COLS},()=>({obstacle:false,ghost:false})));
+  let cells=blank(), entry=null, exit=null, checkpoints=[], zones=[], tool="checkpoint";
+  // lossless import payload (null when authoring fresh):
+  //   { gdLine, beats:[{head, lines:[], isGhost}], tbLine, extraRes:[] }
+  let imported=null;
+
+  const radiusTiles=(mag)=>{ const t=Math.min(Math.max((mag-10)/90,0),1); return 2.25+(0.85-2.25)*t; };
+
+  const cvs=document.getElementById("grid"), ctx=cvs.getContext("2d"), coordEl=document.getElementById("coord");
+
+  function draw(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++){
+      const c=cells[y][x];
+      ctx.fillStyle=c.obstacle?css("--obstacle"):css("--board");
+      ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+      if (c.ghost){
+        ctx.fillStyle="rgba(111,174,154,0.40)"; ctx.fillRect(x*CELL+2,y*CELL+2,CELL-4,CELL-4);
+        ctx.strokeStyle=css("--ghost"); ctx.setLineDash([4,3]); ctx.lineWidth=1.5;
+        ctx.strokeRect(x*CELL+2.5,y*CELL+2.5,CELL-5,CELL-5); ctx.setLineDash([]);
+      }
+    }
+    ctx.strokeStyle=css("--grid-line"); ctx.lineWidth=1;
+    for (let x=0;x<=COLS;x++){ ctx.beginPath(); ctx.moveTo(x*CELL+.5,0); ctx.lineTo(x*CELL+.5,ROWS*CELL); ctx.stroke(); }
+    for (let y=0;y<=ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*CELL+.5); ctx.lineTo(COLS*CELL,y*CELL+.5); ctx.stroke(); }
+    if (entry) marker(entry,css("--green"),"IN");
+    if (exit) marker(exit,css("--terra"),"OUT");
+    checkpoints.forEach((cp,i)=>marker(cp,css("--gold"),String(i+1)));
+    zones.forEach((z)=>{
+      const cx=z.x*CELL+CELL/2, cy=z.y*CELL+CELL/2, r=radiusTiles(z.mag)*CELL;
+      ctx.fillStyle=hexA(ZONE_COLOR[z.type],0.22); ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=hexA(ZONE_COLOR[z.type],0.85); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+      ctx.font="600 11px 'IBM Plex Mono'"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      const sign=z.type==="slow"?"-":"+", lbl=ZONE_LABEL[z.type]+" "+sign+z.mag+"%";
+      ctx.lineWidth=3; ctx.strokeStyle="rgba(0,0,0,.7)"; ctx.strokeText(lbl,cx,cy);
+      ctx.fillStyle="#fff"; ctx.fillText(lbl,cx,cy);
+      ctx.fillStyle=ZONE_COLOR[z.type]; ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
+    });
+    if (hover&&hover.x>=0){ ctx.strokeStyle=css("--gold"); ctx.lineWidth=2; ctx.strokeRect(hover.x*CELL+1,hover.y*CELL+1,CELL-2,CELL-2); }
+  }
+  function marker(p,color,txt){
+    ctx.fillStyle=color; ctx.fillRect(p.x*CELL+3,p.y*CELL+3,CELL-6,CELL-6);
+    ctx.fillStyle="#15180e"; ctx.font="700 13px 'Fredoka'"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(txt,p.x*CELL+CELL/2,p.y*CELL+CELL/2+1);
+  }
+  function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+
+  let hover=null, painting=false, eraseMode=false;
+  function cellAt(e){ const r=cvs.getBoundingClientRect();
+    const x=Math.floor((e.clientX-r.left)/(r.width/COLS)), y=Math.floor((e.clientY-r.top)/(r.height/ROWS));
+    return (x<0||x>=COLS||y<0||y>=ROWS)?{x:-1,y:-1}:{x,y}; }
+  function clearMarkersAt(x,y){
+    if (entry&&entry.x===x&&entry.y===y) entry=null;
+    if (exit&&exit.x===x&&exit.y===y) exit=null;
+    checkpoints=checkpoints.filter(c=>!(c.x===x&&c.y===y));
+  }
+  function apply(x,y,erase){
+    if (x<0) return; const t=erase?"board":tool; if (t==="zone") return;
+    if (t==="board"){ cells[y][x]={obstacle:false,ghost:false}; clearMarkersAt(x,y); }
+    else if (t==="obstacle"){ clearMarkersAt(x,y); cells[y][x]={obstacle:true,ghost:false}; }
+    else if (t==="ghost"){ clearMarkersAt(x,y); cells[y][x]={obstacle:false,ghost:true}; }
+    else if (t==="entry"){ cells[y][x]={obstacle:false,ghost:false}; clearMarkersAt(x,y); entry={x,y}; }
+    else if (t==="exit"){ cells[y][x]={obstacle:false,ghost:false}; clearMarkersAt(x,y); exit={x,y}; }
+    else if (t==="checkpoint"){
+      const idx=checkpoints.findIndex(c=>c.x===x&&c.y===y);
+      if (idx>=0) checkpoints.splice(idx,1);
+      else { cells[y][x]={obstacle:false,ghost:false};
+        if (entry&&entry.x===x&&entry.y===y) entry=null; if (exit&&exit.x===x&&exit.y===y) exit=null;
+        checkpoints.push({x,y}); }
+    }
+  }
+  cvs.addEventListener("contextmenu",e=>e.preventDefault());
+  cvs.addEventListener("mousedown",e=>{ const c=cellAt(e); if (c.x<0) return;
+    if (tool==="zone"&&e.button===0){ zones.push({type:"damage",x:c.x,y:c.y,mag:30}); refresh(); return; }
+    painting=true; eraseMode=(e.button===2); apply(c.x,c.y,eraseMode); refresh(); });
+  cvs.addEventListener("mousemove",e=>{ const c=cellAt(e); hover=c;
+    coordEl.textContent=c.x<0?"—":`x ${c.x}, y ${c.y}`;
+    if (painting&&(tool==="obstacle"||tool==="ghost"||eraseMode)){ apply(c.x,c.y,eraseMode); refresh(); } else draw(); });
+  window.addEventListener("mouseup",()=>{ painting=false; eraseMode=false; });
+  cvs.addEventListener("mouseleave",()=>{ hover=null; coordEl.textContent="—"; draw(); });
+
+  document.querySelectorAll(".tool").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".tool").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+    tool=b.dataset.tool; document.getElementById("znote").style.display=tool==="zone"?"none":"block"; }));
+  const KEYMAP={"1":"board","2":"entry","3":"exit","4":"checkpoint","5":"obstacle","6":"ghost","z":"zone","Z":"zone"};
+  window.addEventListener("keydown",e=>{ if (e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
+    const t=KEYMAP[e.key]; if (!t) return; tool=t;
+    document.querySelectorAll(".tool").forEach(x=>x.classList.toggle("active",x.dataset.tool===t));
+    document.getElementById("znote").style.display=t==="zone"?"none":"block"; });
+
+  // ---- validation ----
+  function obstacleSet(){ const s=new Set();
+    for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) if (cells[y][x].obstacle) s.add(x+","+y); return s; }
+  function bfs(a,b,obs){ if (!a||!b) return false;
+    const seen=new Set([a.x+","+a.y]); const q=[a];
+    while(q.length){ const p=q.shift(); if (p.x===b.x&&p.y===b.y) return true;
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=p.x+dx,ny=p.y+dy,k=nx+","+ny;
+        if (nx<0||nx>=COLS||ny<0||ny>=ROWS||obs.has(k)||seen.has(k)) continue; seen.add(k); q.push({x:nx,y:ny}); } }
+    return false; }
+  function validate(){
+    const errs=[], warns=[];
+    if (!entry) errs.push("No entry cell.");
+    if (!exit) errs.push("No exit cell.");
+    if (checkpoints.length<1) errs.push("Need at least 1 checkpoint.");
+    if (checkpoints.length>3) errs.push("Max 3 checkpoints (MapResource allows 1–3).");
+    if (!errs.length){
+      const obs=obstacleSet(), stops=[entry,...checkpoints,exit]; let broke=-1;
+      for (let i=0;i<stops.length-1;i++){ if (!bfs(stops[i],stops[i+1],obs)){ broke=i; break; } }
+      if (broke>=0){ const names=["entry",...checkpoints.map((_,i)=>"checkpoint "+(i+1)),"exit"];
+        errs.push(`No open path: ${names[broke]} → ${names[broke+1]} is walled off by obstacles.`); }
+    }
+    if (zones.length>=3){ let triple=false;
+      for (let y=0;y<ROWS&&!triple;y++) for (let x=0;x<COLS;x++){ const cx=x*CELL+CELL/2,cy=y*CELL+CELL/2; let n=0;
+        for (const z of zones){ const r=radiusTiles(z.mag)*CELL,zx=z.x*CELL+CELL/2,zy=z.y*CELL+CELL/2;
+          if ((cx-zx)**2+(cy-zy)**2<=r*r) n++; } if (n>=3){ triple=true; break; } }
+      if (triple) warns.push("3+ bonus zones overlap somewhere — design pillar caps overlap at two."); }
+    const box=document.getElementById("valBox"), msg=document.getElementById("valMsg");
+    if (errs.length){ box.className="valid bad"; box.textContent="✗ "+errs.length+" issue"+(errs.length>1?"s":""); msg.innerHTML=errs.join("<br>"); }
+    else if (warns.length){ box.className="valid warn"; box.textContent="△ Valid, with warnings"; msg.innerHTML=warns.join("<br>"); }
+    else { box.className="valid ok"; box.textContent="✓ Valid";
+      msg.innerHTML=`${checkpoints.length} checkpoint${checkpoints.length>1?"s":""} · path clear · ${zones.length} zone${zones.length!==1?"s":""}`; }
+    return errs.length===0;
+  }
+
+  const P=(id)=>document.getElementById(id);
+  function params(){ return { index:+P("p_index").value, seed:+P("p_seed").value, name:P("p_name").value,
+    desc:P("p_desc").value, supply:+P("p_supply").value, rounds:+P("p_rounds").value, mobs:+P("p_mobs").value,
+    bronze:+P("p_bronze").value, silver:+P("p_silver").value, gold:+P("p_gold").value }; }
+  ["p_index","p_seed","p_name","p_desc","p_supply","p_rounds","p_mobs","p_bronze","p_silver","p_gold"]
+    .forEach(id=>P(id).addEventListener("input",buildOut));
+
+  function renderZones(){
+    const el=document.getElementById("zlist"); el.innerHTML="";
+    zones.forEach((z,i)=>{ const d=document.createElement("div"); d.className="zitem";
+      d.innerHTML=`<span class="zdot" style="background:${ZONE_COLOR[z.type]}"></span>
+        <select data-i="${i}" class="zt">${ZONE_TYPES.map(t=>`<option value="${t}" ${t===z.type?"selected":""}>${ZONE_LABEL[t]}</option>`).join("")}</select>
+        <input type="number" class="zm" data-i="${i}" value="${z.mag}" min="10" max="100" step="10">
+        <span class="tiny">@${z.x},${z.y}</span><span class="zx" data-i="${i}">✕</span>`;
+      el.appendChild(d); });
+    el.querySelectorAll(".zt").forEach(s=>s.addEventListener("change",e=>{ zones[+e.target.dataset.i].type=e.target.value; refresh(); }));
+    el.querySelectorAll(".zm").forEach(s=>s.addEventListener("input",e=>{ let v=Math.round(+e.target.value/10)*10; v=Math.min(100,Math.max(10,v)); zones[+e.target.dataset.i].mag=v; refresh(); }));
+    el.querySelectorAll(".zx").forEach(s=>s.addEventListener("click",e=>{ zones.splice(+e.target.dataset.i,1); refresh(); }));
+  }
+
+  // ---- export ----
+  const vi=(p)=>`Vector2i(${p.x}, ${p.y})`;
+  const arr=(list)=>`Array[Vector2i]([${list.map(vi).join(", ")}])`;
+  function obstacleList(){ const o=[]; for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) if (cells[y][x].obstacle) o.push({x,y}); return o; }
+  function ghostList(){ const o=[]; for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) if (cells[y][x].ghost) o.push({x,y}); return o; }
+
+  function tres(){
+    const pr=params(), obs=obstacleList(), gh=ghostList(), hasZones=zones.length>0;
+    const beats = imported ? imported.beats : [];
+    const hasBeats = beats.length>0;
+    let s = (imported?.gdLine || `[gd_resource type="Resource" script_class="MapResource" format=3]`) + "\n\n";
+    if (hasBeats)  s += `[ext_resource type="Script" path="res://resources/tutorial_beat.gd" id="1_beat"]\n`;
+    if (hasZones)  s += `[ext_resource type="Script" path="res://resources/zone_definition.gd" id="2_zone"]\n`;
+    s += `[ext_resource type="Script" path="res://resources/map_resource.gd" id="3_map"]\n\n`;
+    // preserved tutorial beats (script ref normalized to 1_beat; ghost beat's ghost_cells rewritten)
+    beats.forEach((b)=>{
+      s += b.head + "\n";
+      let wroteGhost=false;
+      for (let ln of b.lines){
+        if (/^\s*script\s*=\s*ExtResource\(/.test(ln)) ln = `script = ExtResource("1_beat")`;
+        if (b.isGhost && /^\s*ghost_cells\s*=/.test(ln)){ ln = `ghost_cells = ${arr(gh)}`; wroteGhost=true; }
+        s += ln + "\n";
+      }
+      if (b.isGhost && !wroteGhost) s += `ghost_cells = ${arr(gh)}\n`;
+      s += "\n";
+    });
+    // bonus zones (regenerated from editor state)
+    zones.forEach((z,i)=>{ s += `[sub_resource type="Resource" id="Zone_${i}"]\nscript = ExtResource("2_zone")\n`;
+      s += `type = ${ZONE_TYPES.indexOf(z.type)}\ncell = ${vi(z)}\nmagnitude = ${z.mag}\n\n`; });
+    // resource block
+    s += `[resource]\nscript = ExtResource("3_map")\n`;
+    s += `seed = ${pr.seed}\nmode = 0\ngrid_size = Vector2i(${COLS}, ${ROWS})\n`;
+    s += `entry_cell = ${entry?vi(entry):"Vector2i(0, 0)"}\nexit_cell = ${exit?vi(exit):"Vector2i(0, 0)"}\n`;
+    s += `checkpoint_cells = ${arr(checkpoints)}\nobstacle_cells = ${arr(obs)}\n`;
+    s += `bonus_zones = [${zones.map((_,i)=>`SubResource("Zone_${i}")`).join(", ")}]\n`;
+    s += `supply_cap = ${pr.supply}\nround_count = ${pr.rounds}\nmob_count = ${pr.mobs}\n`;
+    s += `bronze_threshold = ${pr.bronze}\nsilver_threshold = ${pr.silver}\ngold_threshold = ${pr.gold}\n`;
+    s += `mission_index = ${pr.index}\nmission_name = ${JSON.stringify(pr.name)}\nmission_description = ${JSON.stringify(pr.desc)}\n`;
+    if (hasBeats) s += (imported.tbLine || "") + "\n";
+    else { s += `tutorial_beats = []\n`;
+      s += `# build-phase ghost_cells (CC: drop into the on_build_phase_start TutorialBeat):\n# ghost_cells = ${arr(gh)}\n`; }
+    if (imported?.extraRes?.length) s += imported.extraRes.join("\n") + "\n";
+    return s;
+  }
+  function ghostExport(){ const gh=ghostList();
+    return `# On the build-phase TutorialBeat (anchor = "board"):\nghost_cells = ${arr(gh)}\n\n# (${gh.length} cell${gh.length!==1?"s":""})`; }
+  function jsonExport(){ return JSON.stringify({ v:1, cols:COLS, rows:ROWS, entry, exit, checkpoints,
+    obstacles:obstacleList(), ghosts:ghostList(), zones, params:params(),
+    _beats: imported?{gdLine:imported.gdLine,beats:imported.beats,tbLine:imported.tbLine,extraRes:imported.extraRes}:null }, null, 2); }
+
+  let outMode="tres";
+  document.querySelectorAll(".out-tab").forEach(t=>t.addEventListener("click",()=>{
+    document.querySelectorAll(".out-tab").forEach(x=>x.classList.remove("active")); t.classList.add("active");
+    outMode=t.dataset.out; buildOut(); }));
+  function buildOut(){ document.getElementById("outBox").textContent =
+    outMode==="tres"?tres():outMode==="ghost"?ghostExport():jsonExport(); }
+
+  // ---- file download ----
+  function download(filename,text){
+    try {
+      const blob=new Blob([text],{type:"text/plain"}); const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },120);
+      return true;
+    } catch(e){ return false; }
+  }
+  const missionFile=()=>`mission_${String(params().index).padStart(2,"0")}.tres`;
+  document.getElementById("saveTresBtn").addEventListener("click",()=>{
+    if (!validate()){ if (!confirm("There are validation issues — save the .tres anyway?")) return; }
+    const ok=download(missionFile(),tres());
+    flash("saveTresBtn", ok?"Saved "+missionFile():"Blocked — use Copy");
+  });
+  document.getElementById("saveJsonBtn").addEventListener("click",()=>{
+    const ok=download(`map_${String(params().index).padStart(2,"0")}.json`,jsonExport());
+    flash("saveJsonBtn", ok?"Saved .json":"Blocked — use Copy"); });
+  document.getElementById("copyBtn").addEventListener("click",()=>{
+    navigator.clipboard?.writeText(document.getElementById("outBox").textContent)
+      .then(()=>flash("copyBtn","Copied!"),()=>flash("copyBtn","Copy failed")); });
+  function flash(id,m){ const b=document.getElementById(id),o=b.textContent; b.textContent=m; setTimeout(()=>b.textContent=o,1300); }
+
+  document.getElementById("clearBtn").addEventListener("click",()=>{
+    if (!confirm("Clear the board and drop the imported file?")) return;
+    cells=blank(); entry=null; exit=null; checkpoints=[]; zones=[]; imported=null; setBadge(); refresh(); });
+
+  // ---- import ----
+  document.getElementById("importFileBtn").addEventListener("click",()=>document.getElementById("fileIn").click());
+  document.getElementById("fileIn").addEventListener("change",e=>{
+    const f=e.target.files[0]; if (!f) return; const fr=new FileReader();
+    fr.onload=()=>{ const txt=String(fr.result);
+      try { if (f.name.toLowerCase().endsWith(".json")) loadFromObj(JSON.parse(txt)); else loadFromTres(txt); refresh(); }
+      catch(err){ alert("Couldn't parse "+f.name+": "+err.message); } };
+    fr.readAsText(f); e.target.value="";
+  });
+
+  function setBadge(name){ const b=document.getElementById("srcBadge");
+    if (imported){ b.textContent="editing "+(name||"imported .tres")+" · beats preserved"; b.className="badge live"; }
+    else { b.textContent="fresh"; b.className="badge"; } }
+
+  function parseVecs(str){ const out=[]; const re=/Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)/g; let m;
+    while((m=re.exec(str))!==null) out.push({x:+m[1],y:+m[2]}); return out; }
+
+  function loadFromTres(text){
+    const lines=text.split(/\r?\n/);
+    let gdLine=null; const beats=[], extRes=[], resLines=[]; let mode="head", cur=null;
+    for (const ln of lines){
+      if (ln.startsWith("[gd_resource")){ gdLine=ln; continue; }
+      if (ln.startsWith("[ext_resource")){ continue; }                 // ids rebuilt on export
+      if (ln.startsWith("[sub_resource")){ if (cur){ classify(cur,beats); } mode="sub"; cur={head:ln,lines:[],isGhost:false}; continue; }
+      if (ln.startsWith("[resource]")){ if (cur){ classify(cur,beats); cur=null; } mode="res"; continue; }
+      if (mode==="sub"&&cur) cur.lines.push(ln);
+      else if (mode==="res") resLines.push(ln);
+    }
+    if (cur) classify(cur,beats);
+
+    // mark the ghost-bearing beat + pull its cells into the editor; flatten others as preserved
+    const keptBeats=[]; let zoneSubs=[]; let ghostCells=[];
+    for (const b of beats){
+      const body=b.lines.join("\n");
+      const isZone=/zone_definition\.gd/.test(body) || (/type\s*=\s*\d/.test(body)&&/magnitude\s*=/.test(body)&&!/trigger/.test(body));
+      if (isZone){ zoneSubs.push(b); continue; }
+      if (/ghost_cells\s*=/.test(body)){ b.isGhost=true; const gline=b.lines.find(l=>/ghost_cells\s*=/.test(l)); ghostCells=parseVecs(gline||""); }
+      keptBeats.push(b);
+    }
+    // if there are beats but none carried ghosts, tag on_build_phase_start as the ghost target
+    if (keptBeats.length && !keptBeats.some(b=>b.isGhost)){
+      const bp=keptBeats.find(b=>/on_build_phase_start/.test(b.lines.join("\n"))); if (bp) bp.isGhost=true;
+    }
+
+    // resource fields
+    const get=(key)=>{ const l=resLines.find(x=>new RegExp("^\\s*"+key+"\\s*=").test(x)); return l?l.slice(l.indexOf("=")+1).trim():null; };
+    const num=(key,def)=>{ const v=get(key); return v===null?def:(parseFloat(v)||0); };
+    const str=(key,def)=>{ const v=get(key); if (v===null) return def; try{ return JSON.parse(v); }catch(_){ return v.replace(/^"|"$/g,""); } };
+
+    cells=blank();
+    parseVecs(get("obstacle_cells")||"").forEach(c=>{ if (cells[c.y]&&cells[c.y][c.x]) cells[c.y][c.x].obstacle=true; });
+    ghostCells.forEach(c=>{ if (cells[c.y]&&cells[c.y][c.x]) cells[c.y][c.x].ghost=true; });
+    const ec=parseVecs(get("entry_cell")||""); entry=ec[0]||null;
+    const xc=parseVecs(get("exit_cell")||"");  exit=xc[0]||null;
+    checkpoints=parseVecs(get("checkpoint_cells")||"");
+    // zones from preserved zone subs
+    zones=zoneSubs.map(b=>{ const body=b.lines.join("\n");
+      const tn=(body.match(/type\s*=\s*(\d+)/)||[])[1]; const cell=parseVecs((body.match(/cell\s*=.*/)||[""])[0])[0]||{x:0,y:0};
+      const mag=(body.match(/magnitude\s*=\s*(\d+)/)||[])[1];
+      return { type:ZONE_TYPES[+tn||0]||"damage", x:cell.x, y:cell.y, mag:+mag||30 }; });
+
+    P("p_index").value=num("mission_index",1); P("p_seed").value=num("seed",1);
+    P("p_name").value=str("mission_name",""); P("p_desc").value=str("mission_description","");
+    P("p_supply").value=num("supply_cap",10); P("p_rounds").value=num("round_count",5); P("p_mobs").value=num("mob_count",6);
+    P("p_bronze").value=num("bronze_threshold",0); P("p_silver").value=num("silver_threshold",0); P("p_gold").value=num("gold_threshold",0);
+
+    const tbLine=resLines.find(x=>/^\s*tutorial_beats\s*=/.test(x))||"";
+    const knownKeys=["seed","mode","grid_size","entry_cell","exit_cell","checkpoint_cells","obstacle_cells","bonus_zones",
+      "supply_cap","round_count","mob_count","bronze_threshold","silver_threshold","gold_threshold",
+      "mission_index","mission_name","mission_description","tutorial_beats","script","scale_tier","window_type","window_date","obstacles","obstacle_cells"];
+    const extraRes=resLines.filter(l=>{ const t=l.trim(); if (!t||t.startsWith("#")) return false;
+      const k=(t.split("=")[0]||"").trim(); return k && !knownKeys.includes(k); });
+
+    imported = keptBeats.length ? { gdLine, beats:keptBeats, tbLine, extraRes } : null;
+    setBadge();
+  }
+  function classify(b,beats){ beats.push(b); }
+
+  function loadFromObj(o){
+    cells=blank();
+    (o.obstacles||[]).forEach(c=>{ if (cells[c.y]&&cells[c.y][c.x]) cells[c.y][c.x].obstacle=true; });
+    (o.ghosts||[]).forEach(c=>{ if (cells[c.y]&&cells[c.y][c.x]) cells[c.y][c.x].ghost=true; });
+    entry=o.entry||null; exit=o.exit||null; checkpoints=o.checkpoints||[]; zones=o.zones||[];
+    const p=o.params||{}; const set=(id,v)=>{ if (v!==undefined&&P(id)) P(id).value=v; };
+    set("p_index",p.index); set("p_seed",p.seed); set("p_name",p.name); set("p_desc",p.desc);
+    set("p_supply",p.supply); set("p_rounds",p.rounds); set("p_mobs",p.mobs);
+    set("p_bronze",p.bronze); set("p_silver",p.silver); set("p_gold",p.gold);
+    imported = o._beats && o._beats.beats && o._beats.beats.length ? o._beats : null;
+    setBadge("map.json");
+  }
+
+  function refresh(){ draw(); validate(); buildOut(); renderZones(); }
+  entry={x:0,y:8}; exit={x:24,y:8}; setBadge(); refresh();
+})();
+</script>
