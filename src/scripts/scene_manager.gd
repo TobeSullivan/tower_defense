@@ -12,6 +12,7 @@ const ResimScript := preload("res://scripts/resim.gd")
 const EnetTransportScript := preload("res://net/enet_transport.gd")
 const NetProtocolScript := preload("res://net/net_protocol.gd")
 const MatchServerScript := preload("res://net/match_server.gd")
+const Motion := preload("res://scripts/motion.gd")
 
 # PVP: 1 local player + 7 bots (DESIGN_MODES: 8-player solo-queue ranked).
 const PVP_BOARD_COUNT := 8
@@ -75,17 +76,62 @@ func goto_home() -> void:
 	active_coordinator = null  # the match scene (and its coordinator) is about to be freed
 	get_tree().paused = false
 	Engine.time_scale = 1.0  # menus always run at normal speed
-	get_tree().change_scene_to_file(HOME_SCENE)
+	_menu_change(HOME_SCENE, true)  # "back" — the cover wipes off to the right
 
 func goto_campaign_select() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	get_tree().change_scene_to_file(CAMPAIGN_SELECT_SCENE)
+	_menu_change(CAMPAIGN_SELECT_SCENE)
 
 func goto_pve_select() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	get_tree().change_scene_to_file(PVE_SELECT_SCENE)
+	_menu_change(PVE_SELECT_SCENE)
+
+# --- Menu screen transition (design/JUICE.md "home->select screen transition", the
+# connective tissue). SceneManager swaps scenes hard, so we snapshot the outgoing screen into
+# a cover on a top CanvasLayer, swap underneath, then slide the cover off — revealing the new
+# screen as it plays its own entrance. Forward wipes left; "back" (home) wipes right. Menus
+# only — entering a MATCH stays a hard cut (gameplay setup shouldn't ride a menu wipe). ---
+var _transition_layer: CanvasLayer = null
+var _did_first_nav := false
+
+func _menu_change(path: String, back := false) -> void:
+	# First navigation (boot -> home) has nothing meaningful to snapshot — hard cut.
+	if not _did_first_nav:
+		_did_first_nav = true
+		get_tree().change_scene_to_file(path)
+		return
+	var vp_size := get_viewport().get_visible_rect().size
+	var img := get_viewport().get_texture().get_image()  # current frame (saved screenshots prove it's upright)
+	if img == null or img.is_empty():
+		get_tree().change_scene_to_file(path)  # no frame to snapshot (e.g. headless) — hard cut
+		return
+	var cover := TextureRect.new()
+	cover.texture = ImageTexture.create_from_image(img)
+	cover.size = vp_size
+	cover.position = Vector2.ZERO
+	cover.mouse_filter = Control.MOUSE_FILTER_STOP  # swallow input during the wipe
+	if _transition_layer == null:
+		_transition_layer = CanvasLayer.new()
+		_transition_layer.layer = 128  # above everything
+		add_child(_transition_layer)
+	_transition_layer.add_child(cover)
+	get_tree().change_scene_to_file(path)
+	_slide_cover_off.call_deferred(cover, back, vp_size.x)
+
+func _slide_cover_off(cover: TextureRect, back: bool, w: float) -> void:
+	if not is_instance_valid(cover):
+		return
+	var t := cover.create_tween()
+	t.set_parallel(true)
+	Motion.leave(t)
+	t.tween_property(cover, "position:x", (w if back else -w), Motion.dur(Motion.SCREEN))
+	t.tween_property(cover, "modulate:a", 0.0, Motion.dur(Motion.SCREEN))
+	t.chain().tween_callback(cover.queue_free)
+	# Safety: the cover swallows input (layer 128), so guarantee it's gone even if the tween
+	# never completes — a stuck cover would soft-lock all navigation.
+	get_tree().create_timer(1.0).timeout.connect(func(): if is_instance_valid(cover): cover.queue_free())
 
 # The leaderboard hub. `ctx` deep-links a category/window/scale (e.g. a Trials-select card
 # or a post-match "View full board" jumps straight to its board); empty opens at the default.
@@ -93,7 +139,7 @@ func goto_leaderboards(ctx := {}) -> void:
 	pending_leaderboard = ctx
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	get_tree().change_scene_to_file(LEADERBOARD_SCENE)
+	_menu_change(LEADERBOARD_SCENE)
 
 # Solo PVE: a generated map played for score. Single-player for pause purposes.
 func start_pve_map(map) -> void:
@@ -119,7 +165,7 @@ func start_pvp() -> void:
 func goto_lobby() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	get_tree().change_scene_to_file(LOBBY_SCENE)
+	_menu_change(LOBBY_SCENE)
 
 # Create a fresh ENet transport as a child of this autoload (stable path for RPCs).
 func _make_transport():
