@@ -46,6 +46,14 @@ var _score_block: VBoxContainer   # DAMAGE key + value, faded/ticked as one unit
 var _vbuttons: HBoxContainer
 var _victory_damage := 0          # cached for the score tick
 
+# Ranked Surface 2 staged-climb refs (design/JUICE.md "Staged climbs" + staged_climbs_mock):
+# the LP bar fills on the settle curve, values pop, a promotion is a staged set-piece.
+var _lp_bar: ProgressBar
+var _lp_value_lbl: Label
+var _lp_tier_lbl: Label
+var _promo_note: Label            # null unless promoted/demoted
+var _ranked_rows: Array = []      # FINAL ORDER rows, staggered in
+
 const STAR_FOR_MEDAL := {"gold": 3, "silver": 2, "bronze": 1, "none": 0}
 const MEDAL_RESULT := {
 	"gold": "Three stars!", "silver": "Two stars", "bronze": "One star", "none": "No stars yet",
@@ -309,46 +317,109 @@ func _show_pvp_ranked(coord) -> void:
 		{"text": "View season ladder", "cb": _on_view_season},
 		{"text": "Queue again ›", "cb": _on_find_new_match, "role": "go"},
 	])
+
+	# Arm-before-reveal: the bar starts at the PRE-match LP and the order rows start hidden, so
+	# the staged climb (bar fill → value/tier pop → order stagger) plays from the right frame.
+	if _lp_bar != null and not bool(result["is_masters"]):
+		_lp_bar.value = clampi(int(result["lp_before"]), 0, 100)
+	for r in _ranked_rows:
+		r.modulate.a = 0.0
+	_scrim.visible = true
 	_panel.visible = true
+	_play_ranked_climb.call_deferred(result)
+
+# Ranked Surface 2 staged climb (design/JUICE.md "Staged climbs"): the LP bar fills on the
+# settle curve, the LP value pops on landing, a promotion is a staged set-piece (the bar tops
+# out, the tier + note pop, then the bar resets and fills into the new tier), and the FINAL
+# ORDER rows slide in staggered from the left. Reduced-motion still lands on the right values.
+func _play_ranked_climb(result: Dictionary) -> void:
+	if _victory != null and _victory.visible:
+		return  # campaign victory owns the surface; never both
+	# Final order rows slide in from the left, after the bar has had a moment to fill.
+	for i in _ranked_rows.size():
+		Motion.slide_in(_ranked_rows[i], Vector2(-18, 0), Motion.S, Motion.dur(0.55 + i * 0.06))
+	if _lp_bar == null:
+		return
+	if bool(result["is_masters"]):
+		if _lp_value_lbl != null:
+			Motion.pop(_lp_value_lbl, 1.14, Motion.M)  # bar is static at 100; just pop the LP
+		return
+	var after := clampf(float(result["lp_after"]), 0.0, 100.0)
+	var t := create_tween()
+	if bool(result["promoted"]):
+		# fill the old tier to the cap → PROMOTED beat (tier/note/value pop) → reset + fill new tier
+		Motion.settle(t)
+		t.tween_property(_lp_bar, "value", 100.0, Motion.dur(Motion.M))
+		t.tween_callback(_ranked_tier_break)
+		t.tween_interval(Motion.dur(0.12))
+		Motion.settle(t)
+		t.tween_property(_lp_bar, "value", after, Motion.dur(Motion.M))
+	elif bool(result["demoted"]):
+		# empty the old tier → drop into the top of the lower tier → settle at the new value
+		Motion.settle(t)
+		t.tween_property(_lp_bar, "value", 0.0, Motion.dur(Motion.M))
+		t.tween_callback(_ranked_tier_break)
+		t.tween_callback(func(): _lp_bar.value = 100.0)
+		t.tween_interval(Motion.dur(0.12))
+		Motion.settle(t)
+		t.tween_property(_lp_bar, "value", after, Motion.dur(Motion.M))
+	else:
+		# same tier: a single fill on the settle curve, the value pops as it lands
+		Motion.settle(t)
+		t.tween_property(_lp_bar, "value", after, Motion.dur(Motion.L))
+		t.tween_callback(func(): if _lp_value_lbl != null: Motion.pop(_lp_value_lbl, 1.14, Motion.S))
+
+# The tier-crossing beat: pop the tier name, the promotion/demotion note, and the LP value.
+func _ranked_tier_break() -> void:
+	if _lp_tier_lbl != null:
+		Motion.pop(_lp_tier_lbl, 1.18, Motion.M)
+	if _promo_note != null:
+		Motion.pop(_promo_note, 1.18, Motion.M)
+	if _lp_value_lbl != null:
+		Motion.pop(_lp_value_lbl, 1.14, Motion.S)
 
 # The LP block (tier · lp arrow · +LP chip · progress bar · "to next") + FINAL ORDER rows.
 func _populate_ranked(result: Dictionary, coord) -> void:
 	for child in _lb_vbox.get_children():
 		child.queue_free()
+	_promo_note = null
+	_ranked_rows = []
 
 	# --- Tier + LP delta row. (No icon: Ranked has no medals, and the asset set has no trophy.)
 	var lp_row := HBoxContainer.new()
 	lp_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	lp_row.add_theme_constant_override("separation", 10)
-	var tier_lbl := _make_label(18, Color("e8c45a"))
-	tier_lbl.text = String(result["tier_after"])
-	lp_row.add_child(tier_lbl)
-	var arrow := _make_label(18, Color.WHITE)
+	_lp_tier_lbl = _make_label(18, Color("e8c45a"))
+	_lp_tier_lbl.text = String(result["tier_after"])
+	lp_row.add_child(_lp_tier_lbl)
+	_lp_value_lbl = _make_label(18, Color.WHITE)
 	if bool(result["is_masters"]):
-		arrow.text = "%d LP" % int(result["lp_after"])
+		_lp_value_lbl.text = "%d LP" % int(result["lp_after"])
 	else:
-		arrow.text = "%d → %d" % [int(result["lp_before"]), int(result["lp_after"])]
-	lp_row.add_child(arrow)
+		_lp_value_lbl.text = "%d → %d" % [int(result["lp_before"]), int(result["lp_after"])]
+	lp_row.add_child(_lp_value_lbl)
 	lp_row.add_child(_lp_chip(int(result["lp_delta"])))
 	_lb_vbox.add_child(lp_row)
 
 	# --- Promotion / demotion note (only when the band changed).
 	if bool(result["promoted"]) or bool(result["demoted"]):
-		var note := _make_label(15, Color("bfe6a3") if bool(result["promoted"]) else Color(0.9, 0.55, 0.45))
-		note.text = ("Promoted to %s!" if bool(result["promoted"]) else "Demoted to %s") % String(result["tier_after"])
-		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_lb_vbox.add_child(note)
+		_promo_note = _make_label(15, Color("bfe6a3") if bool(result["promoted"]) else Color(0.9, 0.55, 0.45))
+		_promo_note.text = ("Promoted to %s!" if bool(result["promoted"]) else "Demoted to %s") % String(result["tier_after"])
+		_promo_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_lb_vbox.add_child(_promo_note)
 
-	# --- Progress bar toward the next tier (full + uncapped caption for Masters).
-	var bar := ProgressBar.new()
-	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 12)
-	bar.min_value = 0
-	bar.max_value = 100
-	bar.value = 100 if bool(result["is_masters"]) else clampi(int(result["lp_after"]), 0, 100)
-	bar.add_theme_stylebox_override("background", UiStyle.flat_box(UiStyle.CHIP_BG, 7, UiStyle.CHIP_BORDER, 2, false))
-	bar.add_theme_stylebox_override("fill", UiStyle.flat_box(UiStyle.START_BG, 7, UiStyle.START_BORDER, 0, false))
-	_lb_vbox.add_child(bar)
+	# --- Progress bar toward the next tier (full + uncapped caption for Masters). The bar FILLS
+	# in the staged climb (armed at lp_before in _show_pvp_ranked); here it's set to the resting
+	# end value so a non-animated path (or reduced-motion) still reads correct.
+	_lp_bar = ProgressBar.new()
+	_lp_bar.show_percentage = false
+	_lp_bar.custom_minimum_size = Vector2(0, 12)
+	_lp_bar.min_value = 0
+	_lp_bar.max_value = 100
+	_lp_bar.value = 100 if bool(result["is_masters"]) else clampi(int(result["lp_after"]), 0, 100)
+	_lp_bar.add_theme_stylebox_override("background", UiStyle.flat_box(UiStyle.CHIP_BG, 7, UiStyle.CHIP_BORDER, 2, false))
+	_lp_bar.add_theme_stylebox_override("fill", UiStyle.flat_box(UiStyle.START_BG, 7, UiStyle.START_BORDER, 0, false))
+	_lb_vbox.add_child(_lp_bar)
 
 	var to_next := _make_label(12, UiStyle.LABEL_COL)
 	to_next.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -373,7 +444,9 @@ func _populate_ranked(result: Dictionary, coord) -> void:
 		var is_me: bool = b == round_manager
 		# Own row shows the actual MMR-adjusted LP earned; others show the public base LP for that place.
 		var lp: int = int(result["earned"]) if is_me else RankedLadder.base_lp(p, count)
-		_lb_vbox.add_child(_ranked_row(p, coord.name_for(b), lp, is_me, bool(b.eliminated)))
+		var row := _ranked_row(p, coord.name_for(b), lp, is_me, bool(b.eliminated))
+		_lb_vbox.add_child(row)
+		_ranked_rows.append(row)
 	_lb_vbox.visible = true
 
 # The green "+30 LP" delta chip (red-tinted for a net loss).

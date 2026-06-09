@@ -63,6 +63,10 @@ var _ff_index: int = 0
 var _towers_count: int = 0
 var _towers_cap: int = 0
 var _last_build_mode: bool = false
+# Ghost-ladder climb beat (design/JUICE.md "Staged climbs"): when the score passes a rung the
+# lowest remaining target rises — pop the Current value to mark the climb. Tracked here.
+var _ladder_first_target: int = 0
+var _ladder_init: bool = false
 
 func _ready() -> void:
 	layer = 6
@@ -351,6 +355,13 @@ func _refresh_score() -> void:
 	var rungs: Array = []
 	if _rung_source != null:
 		rungs = _rung_source.rungs_above(dmg, _rungs.size())
+	# JUICE: the lowest remaining target is the next rung; when it rises, the score just climbed
+	# past a rung — pop the Current value as the climb beat (one pop per pass, not per hit).
+	var first_target: int = int(rungs[0]["target"]) if not rungs.is_empty() else -1
+	if _ladder_init and first_target != _ladder_first_target:
+		Motion.pop(_score_hero, 1.14, Motion.S)
+	_ladder_first_target = first_target
+	_ladder_init = true
 	for i in range(_rungs.size()):
 		var r: Dictionary = _rungs[i]
 		if i < rungs.size():

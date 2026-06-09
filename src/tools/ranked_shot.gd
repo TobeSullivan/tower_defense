@@ -28,12 +28,15 @@ func _ready() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	for i in range(20):
-		await get_tree().process_frame
+	# Mid-climb: the LP bar is filling, order rows arriving (~0.35s).
+	await get_tree().create_timer(0.35).timeout
 	await RenderingServer.frame_post_draw
-	var img := get_viewport().get_texture().get_image()
-	img.save_png(OUT_DIR + "ranked_surface2.png")
-	print("SHOT ranked_surface2.png")
+	get_viewport().get_texture().get_image().save_png(OUT_DIR + "ranked_mid.png")
+	# Settled: bar at the final LP, rows in.
+	await get_tree().create_timer(1.3).timeout
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(OUT_DIR + "ranked_settled.png")
+	print("SHOT ranked_mid.png + ranked_settled.png")
 	get_tree().quit()
 
 class FakeBoard extends Node:
