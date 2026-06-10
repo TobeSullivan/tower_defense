@@ -214,13 +214,19 @@ static func _board_offset(index: int, grid_size: Vector2i, local_index: int = 0)
 
 # Builds one board's full sim subtree under `container` and returns its BoardState.
 static func _build_board(container: Node2D, map, coordinator, is_local: bool, use_bots: bool = true):
-	# Equipped board biome — LOCAL board only. Opponent boards keep the default ground:
-	# their cosmetics aren't known here and must never ride the match record (cardinal rule 2).
-	# Render-only read; never enters the sim/record, so determinism is untouched.
+	# Equipped cosmetics — LOCAL board only. Opponent boards keep defaults: their cosmetics
+	# aren't known here and must never ride the match record (cardinal rule 2). All render-only
+	# reads; never enter the sim/record, so determinism is untouched (resim builds local=-1).
 	var board_tex: Texture2D = GRASS_TEX
+	var tower_skin: Texture2D = null
+	var proj_tint := Color.WHITE
 	if is_local:
 		board_tex = CosmeticsCatalog.texture_for(
 			SaveData.equipped_cosmetic("board"), "res://assets/maps/summer_grass_tile.png")
+		var tw := SaveData.equipped_cosmetic("tower")
+		if tw != "" and tw != "tower_arrow":  # non-default body → skin it
+			tower_skin = CosmeticsCatalog.texture_for(tw, "res://assets/towers/arrow_box_loaded.png")
+		proj_tint = CosmeticsCatalog.tint_for(SaveData.equipped_cosmetic("proj"), Color.WHITE)
 	_setup_background(container, map.grid_size, board_tex)
 
 	# Live dirt-road renderer for the mob path (replaces the old dashed overlay). Add
@@ -243,6 +249,8 @@ static func _build_board(container: Node2D, map, coordinator, is_local: bool, us
 
 	var ctrl := BuildControllerScript.new()
 	ctrl.interactive = is_local
+	ctrl.tower_skin_tex = tower_skin  # set before add_child so ctrl._ready skins the ghost
+	ctrl.proj_tint = proj_tint
 	ctrl.mobs_array = mobs
 	ctrl.entry_cell = map.entry_cell
 	ctrl.exit_cell = map.exit_cell

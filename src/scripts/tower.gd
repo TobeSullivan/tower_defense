@@ -28,6 +28,10 @@ const RANGE_SEGMENTS := 48
 
 var mobs: Array = []  # injected by build_controller / main
 var board  # BoardState (round_manager) — for board-scoped zone lookup. Untyped.
+# Equipped cosmetics (LOCAL board only; set by build_controller before _ready). Render-only,
+# never routed through the match record. null/WHITE = the default arrow body / projectile.
+var skin_tex: Texture2D = null
+var proj_tint: Color = Color.WHITE
 var sprite: Sprite2D
 var cooldown: float = 0.0
 var _current_target: Node2D = null
@@ -57,8 +61,16 @@ var _selected: bool = false
 
 func _ready() -> void:
 	sprite = Sprite2D.new()
-	sprite.texture = LOADED_TEX
-	sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
+	if skin_tex != null:
+		# Skinned body (e.g. a crystal): fit to the same on-screen width as the default
+		# arrow box so footprints read identically, and keep the skin through reload (no
+		# unloaded variant). Render-only; never enters the sim/record.
+		sprite.texture = skin_tex
+		var fit := SPRITE_SCALE * float(LOADED_TEX.get_width()) / float(maxi(1, skin_tex.get_width()))
+		sprite.scale = Vector2(fit, fit)
+	else:
+		sprite.texture = LOADED_TEX
+		sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	add_child(sprite)
 
 	_selected_range = Line2D.new()
@@ -198,16 +210,20 @@ func _fire_at(target: Node2D, rng: RandomNumberGenerator) -> void:
 	p.is_crit = is_crit
 	p.source_tower = self
 	p.position = position
+	p.tint = proj_tint
 	get_parent().add_child(p)
 	# Track on this board so BoardState.sim_step advances it on the fixed tick
 	# (projectiles no longer self-_process). board is the BoardState (round_manager).
 	if board != null:
 		board.projectiles.append(p)
 
-	sprite.texture = UNLOADED_TEX
-	var tween := create_tween()
-	tween.tween_interval(0.12)
-	tween.tween_callback(func(): sprite.texture = LOADED_TEX)
+	# Reload tell: arrow box swaps loaded→unloaded→loaded. Skinned bodies have no unloaded
+	# variant, so they keep their texture (the fired projectile is the firing feedback).
+	if skin_tex == null:
+		sprite.texture = UNLOADED_TEX
+		var tween := create_tween()
+		tween.tween_interval(0.12)
+		tween.tween_callback(func(): sprite.texture = LOADED_TEX)
 
 func _update_modulate() -> void:
 	var r := 1.0

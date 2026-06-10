@@ -53,6 +53,11 @@ var seat: int = 0
 var towers: Array = []
 var blocked: Dictionary = {}  # Vector2i -> true
 
+# Equipped cosmetics for THIS board (set by map_loader before add_child, local board only;
+# null/WHITE = defaults). Render-only — applied to placed towers + their projectiles + the ghost.
+var tower_skin_tex: Texture2D = null
+var proj_tint: Color = Color.WHITE
+
 var _ghost: Sprite2D
 var _ghost_range: Line2D
 var _sel_range: Line2D   # high-contrast blue range ring shown for the selected tower
@@ -81,8 +86,13 @@ func _ready() -> void:
 
 	if interactive:
 		_ghost = Sprite2D.new()
-		_ghost.texture = LOADED_TEX
-		_ghost.scale = Vector2(TOWER_SCALE, TOWER_SCALE)
+		if tower_skin_tex != null:
+			_ghost.texture = tower_skin_tex  # placement preview shows the equipped body
+			var gfit := TOWER_SCALE * float(LOADED_TEX.get_width()) / float(maxi(1, tower_skin_tex.get_width()))
+			_ghost.scale = Vector2(gfit, gfit)
+		else:
+			_ghost.texture = LOADED_TEX
+			_ghost.scale = Vector2(TOWER_SCALE, TOWER_SCALE)
 		_ghost.visible = false
 		add_child(_ghost)
 
@@ -436,6 +446,8 @@ func _place_tower(cell: Vector2i) -> void:
 	tower.mobs = mobs_array
 	tower.board = round_manager  # board-scoped zone lookup (set before _ready)
 	tower.total_invested = GameConstants.TOWER_COST
+	tower.skin_tex = tower_skin_tex  # equipped cosmetics (local board only; render-only)
+	tower.proj_tint = proj_tint
 	get_parent().add_child(tower)
 	towers.append(tower)
 	blocked[cell] = true

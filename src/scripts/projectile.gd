@@ -8,6 +8,9 @@ var target  # the Mob this is chasing — untyped (duck-typed .alive/.position/.
 var damage: float = 0.0
 var is_crit: bool = false
 var source_tower: Node2D = null  # who fired this — credited with damage/kills on hit
+# Equipped projectile/FX recolor (render-only; WHITE = default). Crits keep their gold
+# tell regardless, so the crit read never depends on the cosmetic.
+var tint: Color = Color.WHITE
 
 var sprite: Sprite2D
 
@@ -16,9 +19,10 @@ func _ready() -> void:
 	sprite.texture = ARROW_TEX
 	if is_crit:
 		sprite.scale = Vector2(0.32, 0.32)
-		sprite.modulate = Color(1.6, 1.3, 0.4, 1.0)  # gold tint
+		sprite.modulate = Color(1.6, 1.3, 0.4, 1.0)  # gold tint (crit tell — not skinned)
 	else:
 		sprite.scale = Vector2(0.22, 0.22)
+		sprite.modulate = tint
 	add_child(sprite)
 
 # Driven by BoardState.sim_step on the fixed sim tick (no longer self-_process'd).

@@ -17,7 +17,8 @@ func _ready() -> void:
 		board_id = OS.get_environment("WEND_SHOT_BOARD")
 	_saved = SaveData.data.get("cosmetics", {}).duplicate(true)
 	SaveData.data["cosmetics"] = {
-		"owned": [board_id], "equipped": {"board": board_id},
+		"owned": [board_id, "tower_fire_crystal", "fx_gold_bolt"],
+		"equipped": {"board": board_id, "tower": "tower_fire_crystal", "proj": "fx_gold_bolt"},
 		"season_points": 0, "claimed_tiers": [],
 	}
 	# Boot the real match scene as a child so its camera frames the board for us.
@@ -28,7 +29,14 @@ func _ready() -> void:
 	_capture.call_deferred()
 
 func _capture() -> void:
-	await get_tree().create_timer(1.5).timeout
+	# Let the match build, then place a few towers on the local board so the body skin shows.
+	await get_tree().create_timer(0.6).timeout
+	var coord = SceneManager.active_coordinator
+	if coord != null and not coord.boards.is_empty():
+		var ctrl = coord.boards[0].build_controller
+		for cell in [Vector2i(5, 3), Vector2i(7, 3), Vector2i(9, 3), Vector2i(6, 12), Vector2i(8, 12)]:
+			ctrl._place_tower(cell)
+	await get_tree().create_timer(1.0).timeout
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(DIR + "match_board_shot.png")
 	print("SHOT match_board_shot.png")
