@@ -16,16 +16,18 @@ Status key: **OPEN** · **BLOCKED-DATA** · **PARKED** (additive, not now) · **
 ## S1 cosmetic sourcing — closed 2026-06-10 (CC to implement)
 The S1 asset audit is done; sourcing is locked at **$29.35** (Suburbia $19.95 + ice/fireball FX
 $9.40). Full reasoning in `design/SEASON.md` + `notes/board_obstacle_model.md`. CC tasks:
-- **Suburbia pack (purchased + downloaded):** slice the ground tile (→ `board_suburbia`), and tag
-  **each prop with a footprint** for the obstacle library. Retag `board_toybrick` → `board_suburbia`
-  in `cosmetics_catalog.gd` ITEMS + TRACK tier 26 (toy-brick is dead).
-- **Obstacle determinism (gate before library grows):** confirm MP obstacle placement uses one
-  deterministic, shared, resim-fed seed (not client RNG). Then build the obstacle library from
-  Suburbia **scoped to the Suburbia board only**; art free over a fixed footprint, varying footprint
-  rides the seed. See `notes/board_obstacle_model.md`. *(Promote the determinism rule to
-  `decisions.md`.)*
-- **Boards from owned:** `board_forest` = recolor owned **Summer** to a denser green (point its art);
-  `board_beach` = wire the **owned** Tiki-beach art (currently `art:""`).
+- **Suburbia pack:** ground tile sliced (red-brick `fill-texture` → `src/assets/maps/suburbia_tile.png`)
+  + `board_toybrick` retagged → `board_suburbia` in `cosmetics_catalog.gd` ITEMS + TRACK tier 26, path-dirt
+  set to grey for contrast — **done 2026-06-10 (CC), verified in preview.** *Still TODO:* tag each prop
+  with a footprint for the obstacle library (Phase 3, below).
+- **Obstacle determinism — GATE CLEARED ✓ (2026-06-10, CC):** verified `match_room.gd:60` issues one
+  `hash(match_id)` seed, broadcasts it to all clients via `START_MATCH`, and `map_generator.generate(seed)`
+  derives the entire map incl. every obstacle; `resim.gd` rebuilds the same map from `record["seed"]`.
+  Deterministic + shared + resim-fed — safe to build the Suburbia-scoped obstacle library (art free over a
+  fixed footprint, varying footprint rides the seed). *(Still promote the rule to `decisions.md`.)*
+- **Boards from owned:** `board_forest` **done 2026-06-10 (CC)** — baked pine-green recolor of Summer →
+  `forest_tile.png` (no runtime tint: `collection.gd:556` rule forbids tinting painted sprites);
+  `board_beach` **BLOCKED** — Tiki art not uploaded yet (`art:""`).
 - **Mob recolors (green/purple/cyan, tiers 2/11/21):** re-base off the dropped Monster Maker kit
   onto a runtime tint of the owned **undead** default.
 - **Aquatic mobs (fish/starfish/hammerhead, tiers 6/16/27):** owned, but never went through the

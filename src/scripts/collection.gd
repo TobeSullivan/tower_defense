@@ -485,7 +485,7 @@ class PreviewBoard extends Control:
 	const MOB_COUNT := 5
 	# Path-dirt tone per biome id (the path readability contrast — COSMETICS hard filter).
 	const PATH_DIRT := {"board_summer": Color("cdb98a"), "board_forest": Color("b59560"),
-		"board_beach": Color("e8d9a8"), "board_toybrick": Color("c46a5a")}
+		"board_beach": Color("e8d9a8"), "board_suburbia": Color("8a8f96")}
 
 	var _path: Array = []        # Vector2 cell centres, entry -> CP -> exit
 	var _running := false
