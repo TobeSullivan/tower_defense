@@ -2,24 +2,35 @@
 Last updated: 2026-06-10
 
 ## Current focus
-S1 cosmetic implementation (CC). Boards, ranked rename, and apply-skins-in-match are **done**;
-what's left is design-gated content art (FX behavior, obstacle prop set, frames/banners).
+S1 cosmetic implementation (CC). Boards, ranked rename, apply-skins-in-match, and the
+**Suburbia obstacle library** are **done**; what's left is FX behavior + frames/banners.
 
 ## ⏭ NEXT UP (start here next chat)
-S1 implementation, remaining phases — each needs an aesthetic call (mark them, then build):
-1. **Bespoke FX (②)** — fireball (T10/14) + ice (T20) frames are extracted in `art/` (zips).
-   **Decision:** how the animated FX plays vs the cardinal rule "FX match the default
-   silhouette + duration" — replace the arrow projectile sprite with the animation, or overlay
-   an impact burst? Then wire owned-bench FX (smoke ring/lightning/explosion) + dark recolor.
-3. **Suburbia obstacle library (③)** — determinism gate already cleared. Footprint-tag the
-   Suburbia props (`art/Topdownsuburbiamegapack…`: trees/bushes/fences/house-parts) into
-   `obstacle_props.gd`, scoped to the Suburbia board. **Decision:** which props + footprints.
-4. **Frames/banners (⑥)** — author from the owned Wood-UI kit (single-hue outline art).
+S1 implementation, remaining phases:
+1. **Bespoke FX (②)** — **direction LOCKED this session** (`decisions.md` Cosmetics): FX is a set
+   of HOOK points. *Body* hook = the projectile sprite IS the fireball/bolt (same path/speed/size
+   as the arrow); *impact* hook = detonation/burst on hit (**noise-gated** — small/short, eyeball
+   at scale via `match_shot`, dial back to on-kill-only if busy); *trail* hook. Fireball (T10/14) +
+   ice (T20) frames extracted in `art/` (zips). **Build:** wire the hook system, map each catalog
+   `fx_*` to its hook(s), then owned-bench FX (smoke ring/lightning/explosion) + dark recolor. SFX ok.
+2. **Frames/banners (⑥)** — author from the owned Wood-UI kit (single-hue outline art).
 - **Parked/flagged:** zone tint in-match (clashes with type-color legibility — design call);
   mob recolors (no-tint-painted-sprite rule conflict); aquatic-mob perspective check; Beach
   T17 **BLOCKED** on Tiki art upload. Full detail: `notes/open_items.md` "S1 cosmetic sourcing".
 
-## Last session (2026-06-10, CC — S1 implementation)
+## Last session (2026-06-10, CC — S1 obstacles + FX direction)
+- **Suburbia obstacle library (③) shipped.** Decoupled obstacle ART from the seed: the generator
+  now bakes only the blocking footprint (empty `prop_id`); art is resolved LOCALLY per equipped
+  board by `ObstacleProps.art_for(board, footprint, cell_key)`. `obstacle_props.gd` reorganised into
+  per-board pools (default urban-decay + new SUBURBIA: 18×1×1 greenery/clutter, slide 1×2, pond 2×2);
+  20 props extracted to `src/assets/environment/suburbia/`. `map_loader._setup_obstacles` threads the
+  local `board_id` + resolves art; authored `.tres` prop_id still wins. sim_harness all-5 green
+  (dmg shifted 54985→67903 as the seed-777 layout changed; live==resim holds), cosmetics green, and
+  the Suburbia board renders bushes/chairs (was grey rubble) in a real M1 shot. **Render-unverified:**
+  slide (1×2) + pond (2×2) only spawn on generated maps — footprints exercised by sim_harness, not yet seen.
+- **FX direction LOCKED** (see NEXT UP ② + `decisions.md`): hook-based (body/impact/trail), impact noise-gated.
+
+## Prior session (2026-06-10, CC — S1 implementation)
 Three phases shipped (commits `03b9aae` → `5c563b0`, pushed):
 - **Boards:** Suburbia red-brick (T26, retag from toy-brick) + Forest baked pine recolor (T8);
   obstacle determinism gate **verified cleared** (whole map incl. obstacles derives from one
@@ -31,7 +42,7 @@ Three phases shipped (commits `03b9aae` → `5c563b0`, pushed):
   Shared resolver `CosmeticsCatalog.texture_for/tint_for`. Verified in real M1 matches via the
   reusable `match_shot.tscn` harness; sim_harness round-trip + determinism green.
 
-## Prior session (2026-06-10, design)
+## Earlier session (2026-06-10, design)
 Audited the full S1 asset list section by section against top-down + the *real* board model:
 - **Board architecture corrected:** the path is a procedural Line2D (`road_renderer.gd`); the ground
   is a swappable tiling texture (`map_loader.gd`). Boards need **no matched path tiles** — any

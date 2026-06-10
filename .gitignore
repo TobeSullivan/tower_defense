@@ -5,6 +5,7 @@ art.zip
 # Dev artifacts (video frame extracts, screenshots, etc.)
 notes/video_frames/
 notes/screenshots/
+match_board_shot.png
 
 # Claude Code local state (plans, local settings, locks)
 .claude/

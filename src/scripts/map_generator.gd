@@ -100,10 +100,10 @@ static func generate(seed: int, scale_tier: int, mode: int, window_type: int = 0
 		# Cap footprint by the remaining cell budget so a 2×2 doesn't blow past it.
 		var remaining := target_cells - placed_cells
 		var max_dim: int = 2 if remaining >= 3 else 1
-		var prop_id := ObstaclePropsScript.pick_for_footprint(rng, max_dim, max_dim)
-		if prop_id == "":
-			continue
-		var fp: Vector2i = ObstaclePropsScript.footprint_for(prop_id)
+		# Bake only the blocking FOOTPRINT into the seed — the prop art is resolved
+		# locally per equipped board at draw time (notes/board_obstacle_model.md), so
+		# the shared/resim-fed map never carries a themed prop_id.
+		var fp: Vector2i = ObstaclePropsScript.pick_footprint(rng, max_dim)
 		# Origin keeps the WHOLE footprint clear of the edge columns so the
 		# entry/exit funnel never seals.
 		var origin := Vector2i(rng.randi_range(3, cols - 4 - (fp.x - 1)), rng.randi_range(1, rows - 2 - (fp.y - 1)))
@@ -124,7 +124,7 @@ static func generate(seed: int, scale_tier: int, mode: int, window_type: int = 0
 				blocked.erase(c)  # this prop would seal the path — skip it
 			continue
 		var d: Variant = ObstacleDefinitionScript.new()
-		d.prop_id = prop_id
+		d.prop_id = ""        # art resolved locally per equipped board (board_obstacle_model.md)
 		d.origin = origin
 		d.footprint = fp
 		obstacles.append(d)

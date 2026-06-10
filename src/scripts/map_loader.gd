@@ -220,9 +220,11 @@ static func _build_board(container: Node2D, map, coordinator, is_local: bool, us
 	var board_tex: Texture2D = GRASS_TEX
 	var tower_skin: Texture2D = null
 	var proj_tint := Color.WHITE
+	var board_id := ""   # drives board-scoped obstacle art (local only; "" => default pool)
 	if is_local:
+		board_id = SaveData.equipped_cosmetic("board")
 		board_tex = CosmeticsCatalog.texture_for(
-			SaveData.equipped_cosmetic("board"), "res://assets/maps/summer_grass_tile.png")
+			board_id, "res://assets/maps/summer_grass_tile.png")
 		var tw := SaveData.equipped_cosmetic("tower")
 		if tw != "" and tw != "tower_arrow":  # non-default body → skin it
 			tower_skin = CosmeticsCatalog.texture_for(tw, "res://assets/towers/arrow_box_loaded.png")
@@ -238,7 +240,7 @@ static func _build_board(container: Node2D, map, coordinator, is_local: bool, us
 
 	var zones := _setup_zones(container, map.bonus_zones)
 	_setup_markers(container, map.checkpoint_cells)
-	var obstacle_blocked := _setup_obstacles(container, map)
+	var obstacle_blocked := _setup_obstacles(container, map, board_id)
 
 	# Each board owns its own mob list (NOT shared — that would cross-contaminate
 	# targeting and run-completion detection across boards).
@@ -418,26 +420,43 @@ static func _surround_tex() -> GradientTexture2D:
 	t.height = 256
 	return t
 
-static func _setup_obstacles(parent: Node2D, map) -> Dictionary:
+static func _setup_obstacles(parent: Node2D, map, board_id: String) -> Dictionary:
 	# Each prop blocks its footprint rect (seeds the build controller's pathfinding/
 	# placement map) and renders a sized, base-anchored sprite (may overhang upward).
-	# Falls back to the deprecated bare-cell list (1×1 rubble) if no sized obstacles.
+	# The footprint comes from the seed (shared); the ART is resolved LOCALLY for this
+	# board (board_id) over that footprint — an authored prop_id (campaign .tres) wins,
+	# else ObstacleProps.art_for picks a board-scoped prop. Falls back to the deprecated
+	# bare-cell list (1×1, board-resolved) if no sized obstacles.
 	var blocked := {}
 	var defs: Array = map.obstacles if map.obstacles != null else []
 	if defs.is_empty() and not map.obstacle_cells.is_empty():
 		for cell in map.obstacle_cells:
-			_spawn_obstacle(parent, ObstaclePropsScript.FALLBACK_ID, cell, Vector2i.ONE, blocked)
+			_spawn_obstacle(parent, board_id, "", cell, Vector2i.ONE, blocked)
 	else:
 		for d in defs:
-			_spawn_obstacle(parent, d.prop_id, d.origin, d.footprint, blocked)
+			_spawn_obstacle(parent, board_id, d.prop_id, d.origin, d.footprint, blocked)
 	return blocked
 
-static func _spawn_obstacle(parent: Node2D, prop_id: String, origin: Vector2i, footprint: Vector2i, blocked: Dictionary) -> void:
+static func _spawn_obstacle(parent: Node2D, board_id: String, prop_id: String, origin: Vector2i, footprint: Vector2i, blocked: Dictionary) -> void:
+	var tex: Texture2D
+	var overhang: float
+	if prop_id != "":
+		tex = ObstaclePropsScript.tex_for(prop_id)          # authored: use the stamped prop
+		overhang = ObstaclePropsScript.overhang_for(prop_id)
+	else:
+		var art := ObstaclePropsScript.art_for(board_id, footprint, _cell_art_key(origin))
+		tex = art["tex"]
+		overhang = art["overhang"]
 	var obs := ObstacleScript.new()
 	parent.add_child(obs)
-	obs.setup(ObstaclePropsScript.tex_for(prop_id), origin, footprint, ObstaclePropsScript.overhang_for(prop_id))
+	obs.setup(tex, origin, footprint, overhang)
 	for c in obs.cells:
 		blocked[c] = true
+
+# Stable per-cell key so a given obstacle origin always draws the same prop (varied
+# across cells). Pure function of the cell — no rng, deterministic, board-scoped.
+static func _cell_art_key(cell: Vector2i) -> int:
+	return absi(cell.x * 73856093 ^ cell.y * 19349663)
 
 # Builds this board's zones and returns them as an Array (kept on the BoardState
 # so towers/mobs query only their own board's zones, not a global group).
