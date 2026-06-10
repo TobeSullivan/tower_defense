@@ -376,17 +376,11 @@ func _equip(id: String) -> void:
 	_refresh_all()
 	Motion.pop(_preview if it["slot"] != "frame" and it["slot"] != "banner" and it["slot"] != "title" else _profile_box)
 
-# DEV ONLY (debug builds): F10 grants every catalog cosmetic so any item can be equipped
-# and tested in-match. Compiled out of release/playtest builds via OS.is_debug_build().
-func _unhandled_input(event: InputEvent) -> void:
-	if not OS.is_debug_build():
-		return
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F10:
-		for it in Catalog.ITEMS:
-			SaveData.grant_cosmetic(it["id"])
-		_refresh_all()
-		Motion.pop(_overall_label)
-		print("[DEV] F10 — unlocked all %d cosmetics" % Catalog.ITEMS.size())
+# DEV ONLY: re-read ownership + rebuild after the global F10 unlock-all (SceneManager).
+func dev_refresh() -> void:
+	_load_equipped()
+	_refresh_all()
+	Motion.pop(_overall_label)
 
 # --- Profile card (identity is read-only from the platform; flair is the equip) ---
 

@@ -13,6 +13,7 @@ const EnetTransportScript := preload("res://net/enet_transport.gd")
 const NetProtocolScript := preload("res://net/net_protocol.gd")
 const MatchServerScript := preload("res://net/match_server.gd")
 const Motion := preload("res://scripts/motion.gd")
+const CosmeticsCatalogScript := preload("res://scripts/cosmetics_catalog.gd")
 
 # PVP: 1 local player + 7 bots (DESIGN_MODES: 8-player solo-queue ranked).
 const PVP_BOARD_COUNT := 8
@@ -100,6 +101,21 @@ func goto_season() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 	_menu_change(SEASON_SCENE)
+
+# DEV ONLY (debug builds): F10 anywhere grants every catalog cosmetic so any item can be
+# equipped and tested in-match. Global (autoload) so it works on any screen, not just the
+# Collection. If the active screen exposes dev_refresh() (Collection does), refresh it live.
+# Compiled out of release/playtest builds via OS.is_debug_build().
+func _unhandled_input(event: InputEvent) -> void:
+	if not OS.is_debug_build():
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F10:
+		for it in CosmeticsCatalogScript.ITEMS:
+			SaveData.grant_cosmetic(it["id"])
+		print("[DEV] F10 — unlocked all %d cosmetics" % CosmeticsCatalogScript.ITEMS.size())
+		var scene := get_tree().current_scene
+		if scene != null and scene.has_method("dev_refresh"):
+			scene.dev_refresh()
 
 # --- Menu screen transition (design/JUICE.md "home->select screen transition", the
 # connective tissue). SceneManager swaps scenes hard, so we snapshot the outgoing screen into
