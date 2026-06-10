@@ -1,104 +1,96 @@
-# ASSET BUY LIST - cosmetics acquisition
+# ASSET BUY LIST — post-audit (2026-06-10)
 
-From the curation pass across all slots. Prices are standard; FREE+ = $0 on your
-GDS+ membership. Buy items draw on your store credit. Search the pack name on the
-site, or use the url column in `notes/gds_catalog.csv`.
+**Superseded the old curation pass.** The S1 asset list was audited section by section against the
+hard constraints (top-down only; boards judged by the *real* engine model, not "has path tiles").
+Most of the old list was ruled out. This file now records the **outcome**, not the aspiration.
 
-Order of operations: claim the free grabs first (they're the backbones), then the
-core buy, then depth only if you want it.
-
----
-
-## TIER 0 - Free on your membership (claim now, $0)
-
-These are the backbones for three slots plus the screen-build toolbox.
-
-- **Monster Maker mega kit** - mob variant backbone (generates coherent recolours)
-- **Background Creator Mega Pack** - board backgrounds (confirm it yields path tiles)
-- **Game projectiles** (15 editable) - FX/projectile backbone
-- **Animated flaming fireball** - fire FX
-- **Shield effect** - FX
-- **Game interface Medal icons** - flair emblems (prestige markers; NOT the in-match rating)
-- **Clean and colorful GUI pack** - screen-build kit
-- **Mint Choco complete interface pack** - screen-build kit
-- **Parchment Game UI kit** - screen-build kit
-- **Game Status icons** - UI
-- **Magic elements interface icons** - UI / element art
-
-**Tier 0 cost: $0.**
+**Pricing reality:** the GDS+ membership lapsed — **all prices full, no FREE+, no supporter rate.**
+Renews annually; not worth $100+ to recover ~$5 of savings. Sourcing was redone to lean on owned
+assets + runtime recolors.
 
 ---
 
-## TIER 1 - Core launch set (recommended buy)
+## TOTAL S1 SPEND: $29.35
 
-The minimum that gives every slot real variety on top of what you own.
+- **Top down suburbia mega pack — $19.95** — PURCHASED + DOWNLOADED. Does double duty: the **Tier 26
+  board ground** (`board_suburbia`, replacing dead toy-brick) **and** that board's **obstacle pool**
+  (houses, slides, fences — props nothing else owned provides). CC: slice ground + footprint-tag props.
+- **2d ice effects pack — $8.95** — PURCHASED. Bespoke ice FX for the Ice Crystal milestone (T20).
+- **Rotating fireball FX — $0.45** — PURCHASED. Bespoke fire FX for the Fire Crystal milestone (T10)
+  + fireball trail (T14).
 
-### Mob (undead reward line + the best variant sets)
-- Top down zombies mega character pack - $9.95   (undead reward anchor)
-- One eyed monster collection (x12) - $9.50
-- Animated four-directional elemental slimes - $9.99
-- Top down monster collection: slugoids - $5.00
-- Cute slime monster - $5.95
-
-### Board (three clean biomes)
-- Cartoon top down tileset - $5.95   (matches the comic register)
-- Sandy tileset - $8.95
-- Wild west tile set - $3.95
-
-### FX (element top-ups, paired to tower skins)
-- Lightning ball - $0.75   (electric -> tesla)
-- Rotating fireball effect - $0.45   (fire -> fire crystal)
-- Flame jet - $1.25
-- Smoke ring - $1.25   (cannon)
-- Explosion effect - $1.55
-- Books of magic and spells - $1.00   (magic -> magic eye)
-
-### Flair
-- League badges - $3.25   (rank/prestige emblems)
-
-**Tier 1 cost: ~$68.74.**
+Everything else on the S1 track is **owned, authored, or a runtime recolor → $0.** See
+`design/SEASON.md` for the tier-by-tier source column.
 
 ---
 
-## TIER 2 - Depth / variety (optional, add as wanted)
+## Board audit outcome — the kill-criterion was wrong
 
-### Mob
-- Monster collections: tentacloid - $5.00 / larvoid - $5.00 / bugoid - $5.00
-- Cheap comic singles ($1.25 ea): Fat monster, Red imp monster, Wiggly blob monster, Green monster
-- Monster #1-7 packs - $4.95-$7.95 each (pick favourites)
+The original board picks were terrain tilesets bought on the assumption a board needs matched
+`grass|path|grass` tiles. **It doesn't.** The path is a procedural Line2D (`road_renderer.gd`) and
+the ground is a swappable tiling texture (`map_loader.gd`) — independent layers. A board = any
+seamless top-down ground that contrasts the gold/outlined path. Full reasoning:
+`notes/board_obstacle_model.md`.
 
-### Board (more biomes / novelty)
-- Forest tile set - $5.95
-- Top down sea level creator set - $10.00
-- Toy brick level tile set - $2.95   (novelty)
-- Rainbow tile set - $4.95   (novelty)
+Consequence: boards reclassified **scarce → abundant**. S1 boards:
+- **Summer** — owned, default.
+- **Forest** (T8) — recolor owned Summer to denser green. $0.
+- **Beach** (T17) — owned (Tiki beach), CC to wire.
+- **Suburbia** (T26) — purchased (above). Was toy-brick (rejected on taste).
 
-### FX
-- Spiral game effect - $0.75
-- Flare ball effect - $0.75
-- Lava projectile - $1.50
-- Electric spark bolt effects - $0.50
-- 2d ice game effects and ice spells - $8.95   (ice -> ice crystal)
-
-### Tower (optional comic turrets, confirm top-down on the page)
-- Animated cannon - $1.95
-- Cannon sprite - $0.55
-
-**Tier 2 cost: ~$70 if you take all of it.**
+The owned **Level map path creator** line is shelf-ware for the path (CC only sampled its palette);
+salvage value is its marker art (flags/stars/buttons) for entry/exit markers only.
 
 ---
 
-## Owned already - no action
-- **Towers (all skins):** arrow box (default), ballista, slingshot, tesla, magic eye, crystal x3, catapult (needs PNG export by CC).
-- **FX bench from the tower packs:** arrow, cannonball + explosion + smoke ring, tesla lightning, magic bolts + portals + radiate.
-- **Board biomes:** seasons (summer/autumn/winter/spring), beach, underwater, wild-west, post-apoc (per COSMETICS.md - verify in the art folder).
-- **Flair:** wood-UI kit (frames/banners + the screen build material).
+## Mobs — audit outcome
+
+Surviving packs after the top-down pass (each yields multiple skins; per-file counts need CC to read
+the downloaded sprites — store gives no manifest):
+- **Top down zombies mega pack** — OWNED (undead default; 1 skin live, more inside)
+- **Four-directional elemental slimes**, **Slugoids**, **Tentacloid**, **Larvoid**, **Bugoid** —
+  approved on taste (top-down). Buyable ~$5 each if/when a future season pulls them in; **not bought
+  for S1** (S1 mobs are covered by owned + recolors).
+
+S1 track mobs, all $0: undead recolors green/purple/cyan (runtime tint of owned undead — Monster
+Maker kit **dropped**); **fish / starfish / hammerhead** all owned (perspective check pending —
+plain side-profile fish is the risk).
+
+Killed on perspective: one-eyed collection, cute slime, comic singles (fat/imp/blob/green), Monster
+#2–7, Monster Maker kit.
 
 ---
 
-## Spend summary
-- Free grabs: **$0** (the three slot backbones + screen toolbox)
-- Core launch set: **~$69**
-- Everything (Tier 1 + Tier 2): **~$139**
+## FX — audit outcome
 
-Most of the value is the free tier. The towers cost nothing - they're all owned.
+Owned FX bench (from the tower packs) covers **smoke ring, tesla lightning, explosion** (tiers
+18/24/29); dark (30) is a recolor. **Bespoke FX purchased** for the milestone hero tiers: ice
+($8.95, T20) + rotating fireball ($0.45, T10 + trail T14). Projectile recolors gold/blue are tints.
+
+Killed: Books of magic and spells (icons, not impact FX). Shield + Spiral survive as candidates but
+are **Zone-slot** material, not projectile FX, and exceed the zone "recolor-only" spec — parked for
+the Zone-slot discussion, not bought.
+
+---
+
+## Frames / banners / flair — audit outcome
+
+- **Wood frame** (T5) — owned (Wood-UI kit).
+- **Mint Choco banner** (T15) + **Parchment frame** (T23) — **authored from the owned Wood-UI kit**
+  (single-hue outline art). The $16.95 GUI kits are **dropped** — full price makes extracting one
+  piece each indefensible.
+- **League badges** → Ranked **tier emblems** (system art, not a season reward). Tiers renamed
+  Stone/Bronze/Silver/Gold/Masters; badge art maps 1:1 by name (diamond → Masters; wood unused).
+- **Medals** — **cut** (no equip slot).
+- **UI build kits** — not rewards; build material only.
+
+---
+
+## Owned — no action (tower / FX bench / boards / flair)
+- **Towers (all skins):** arrow box (default), ballista, slingshot, tesla, magic eye, crystal ×3,
+  catapult (needs PNG export by CC). Crystal trio = the S1–S3 milestone towers.
+- **FX bench:** arrow, cannonball + explosion + smoke ring, tesla lightning, magic bolts + portals.
+- **Board grounds:** summer (default) + autumn/winter/spring, beach, underwater, wild-west, post-apoc
+  (verify in art folder).
+- **Aquatic mobs:** fish (×several), starfish, hammerhead/shark, enemy fish pack.
+- **Flair:** Wood-UI kit (frames/banners + screen-build material).

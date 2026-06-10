@@ -13,15 +13,46 @@ Status key: **OPEN** · **BLOCKED-DATA** · **PARKED** (additive, not now) · **
 - **Confirm the entity type** chosen at registration (individual vs company — matters for tax/bank + later restructure).
 - **When it clears:** create the Wend App ID → create the Playtest app **confidential/friends-only** (Playtest App ID + Standard Release keys + Playtest Playable + Store Visibility Hidden; hand keys directly to testers). Public Coming Soon page is gated on the beta art read, not now.
 
-## Cosmetics — open forks (not blocking)
-- **Confirm** the free Background Creator pack actually yields path tiles before relying on it for the board slot.
+## S1 cosmetic sourcing — closed 2026-06-10 (CC to implement)
+The S1 asset audit is done; sourcing is locked at **$29.35** (Suburbia $19.95 + ice/fireball FX
+$9.40). Full reasoning in `design/SEASON.md` + `notes/board_obstacle_model.md`. CC tasks:
+- **Suburbia pack (purchased + downloaded):** slice the ground tile (→ `board_suburbia`), and tag
+  **each prop with a footprint** for the obstacle library. Retag `board_toybrick` → `board_suburbia`
+  in `cosmetics_catalog.gd` ITEMS + TRACK tier 26 (toy-brick is dead).
+- **Obstacle determinism (gate before library grows):** confirm MP obstacle placement uses one
+  deterministic, shared, resim-fed seed (not client RNG). Then build the obstacle library from
+  Suburbia **scoped to the Suburbia board only**; art free over a fixed footprint, varying footprint
+  rides the seed. See `notes/board_obstacle_model.md`. *(Promote the determinism rule to
+  `decisions.md`.)*
+- **Boards from owned:** `board_forest` = recolor owned **Summer** to a denser green (point its art);
+  `board_beach` = wire the **owned** Tiki-beach art (currently `art:""`).
+- **Mob recolors (green/purple/cyan, tiers 2/11/21):** re-base off the dropped Monster Maker kit
+  onto a runtime tint of the owned **undead** default.
+- **Aquatic mobs (fish/starfish/hammerhead, tiers 6/16/27):** owned, but never went through the
+  top-down check — render and confirm perspective (plain side-profile **fish** is the risk;
+  starfish/hammerhead read fine from above).
+- **FX:** smoke ring (18) / lightning (24) / explosion (29) come off the **owned** FX bench (tower
+  packs); dark (30) is a recolor; **Fire (10) + fireball trail (14) + Ice (20) use purchased bespoke
+  FX** (fireball $0.45 + ice $8.95).
+- **Frames/banners authored, not bought:** wood frame (5) owned; Mint Choco banner (15) + Parchment
+  frame (23) **authored from the owned Wood-UI kit** (single-hue outline art) — the $16.95 GUI kits
+  are dropped (membership lapsed → full price, indefensible to extract one piece each).
+- **Optional:** expose per-board path recolor (`road_renderer` already has the 3 Color exports) so a
+  low-contrast ground can shift the path colour instead of needing new art.
+
+## Ranked tier rename (CC find/replace)
+Tiers renamed **Stone → Bronze → Silver → Gold → Masters** (was Bronze/Silver/Gold/Platinum/
+Masters). **Pure rename — ladder scale/LP/demotion/MMR/resim all unchanged.** Propagate the names
+through `pvp_ladder.md`, `leaderboards.md`, `ghost_ladder.md`, and the prestige bundle in
+`cosmetics_catalog.gd` (`title_*` / `frame_*`). League-badge art maps 1:1 by name (pack's diamond →
+Masters; wood unused). *(Promote to `decisions.md`.)*
 
 ## Deploy / ops (CC)
 - **Deploy the beta module to the box:** the `BETA = true` switch (ranked_s0 + `trials_beta_*` boards + `LOBBY_FLOOR 2`) is implemented in the repo (2026-06-09: `index.js` + mirrored client flags `LeaderboardService.BETA` / `SaveData.BUILD_SEASON`) but the box still runs the old module — `scp deploy/nakama/data/modules/index.js` over + `docker compose restart nakama`. The launch revert (flip all three flags together) is documented at each flag site; the floor-4 lock lives in `notes/decisions.md`.
 
 ## CC — carried (not blocking; do as items are promoted)
 - Export a **catapult PNG body** (`towers/catapult/` ships SVG only).
-- Import the **S1 track art** into `src/assets/` as items are promoted: Monster Maker recolors + fish/starfish/hammerhead mobs, forest/beach/toy-brick biomes, the FX kit pieces, wood/parchment frames, Mint Choco banner. The Collection/Season screens (built 2026-06-09) render any item with `art:""` as a placeholder tagged "import pending" — `cosmetics_catalog.gd` is the single place to point art at. Skins live in the client render layer only — never route equipped-skin state through the match record (breaks re-sim determinism).
+- **Import the S1 track art** into `src/assets/` as items are promoted — now mostly owned/authored/recolor per the sourcing block above; the only new art is the Suburbia ground + props. The Collection/Season screens render any item with `art:""` as a placeholder tagged "import pending"; `cosmetics_catalog.gd` is the single place to point art at. Skins live in the client render layer only — never route equipped-skin state through the match record (breaks re-sim determinism).
 - **Apply equipped skins in the real match** (render layer): tower body, board biome tiles, zone tint, projectile/FX tint, mob sprite — read `SaveData.equipped_cosmetic()` at match build, client-side only. The Collection preview board already demonstrates the mapping.
 - Build the **board-sticker render layer:** chrome-edge placement, runtime outline tint per tier, animated multi-color stroke for Masters; toggle; never overlaps the play area.
 - **Post-match Season nudge** (COSMETICS.md: Season "surfaced everywhere") — small tier/progress chip on the Trials/Ranked match-end panel once tasks award points. UNBLOCKED 2026-06-10: the task runtime now lands points at match end and `TaskCatalog.record_match()` returns `{points, completed}` (the chip's data) — just needs the panel UI.
@@ -31,7 +62,6 @@ Status key: **OPEN** · **BLOCKED-DATA** · **PARKED** (additive, not now) · **
 - **Low-pri cosmetic:** `design/DESIGN_MODES.md` schema block still uses literal field names `bronze_threshold`/`silver_threshold`/`gold_threshold` (these are the 1/2/3-star cutoffs). Rename to star-N someday; not worth a churn now.
 
 ## Own session (large)
-- **Finalize season-pass numbers** — `notes/season_pass.md` has a soft 8wk/30-tier/1000pt worked example; now the catalogue + slots + task system exist, the actual tier-by-tier reward mapping can be laid out. Upstream-clear.
 - **Full GTM / marketing plan** — `notes/gtm.md`. **Steam-gated end to end:** the public page is gated on the beta art read, which is gated on people playing the build, which is gated on Steam. No meaningful GTM work survives upstream of the art read (this kept resurfacing as here-doable — it is not). Capsule (~$250+) is the one paid item worth prioritizing once the page is unblocked.
 - **Steam closed-beta ops pipeline** — mechanics are designed (`notes/beta_design_brief.md`); what remains is the Steam-side build pipeline: App ID, Playtest app, Win+Mac export presets, steampipe. Blocked on verification clearing.
 
@@ -41,12 +71,15 @@ Status key: **OPEN** · **BLOCKED-DATA** · **PARKED** (additive, not now) · **
 - **Economy/supply re-tune** for the 25×16 board.
 - **Campaign tuning integers** — supply/rounds/mobs/zone-mix for the five missions; wait on the 25×16 retune + real scores.
 - **PVP seed-convergence** — shared-seed ranked could converge to identical mazes; eyeball in playtest.
+- **Aquatic-mob perspective** — confirm fish/starfish/hammerhead read on a top-down board (render check above; settle in playtest if borderline).
 
 ## Parked — additive, not now
+- **Generic nature-prop obstacle buy** — fixes "same few props" on Forest/Beach/Summer (Suburbia only covers its own board). Buy deliberately if the alive-levels payoff proves out in playtest.
 - **Individual-while-grouped Trials scoring** — a future vote letting grouped players each post to Solo instead of team score. Group size = the board for now.
 - **Ranked ready-check** — ships off; flip on only if AFK-poisoning shows in beta.
 - **Match reconstruction after coordinator crash** — model is re-simmable, but crash currently voids with no LP instead.
 
 ## Drift / audit
+- (Resolved 2026-06-10: S1 cosmetic sourcing audit — board kill-criterion corrected, Suburbia swapped for toy-brick, sourcing re-priced to full freight, tiers renamed.)
 - (Resolved 2026-06-10: `multiplayer_architecture.md` verdict column fixed — banner added, Steam-relay → skipped, Dedicated → deployed.)
 - (Resolved 2026-06-09: 4-digit room-code sweep, grid-figure sweep, 10-mission refs, title, stale HUD subsection.)
