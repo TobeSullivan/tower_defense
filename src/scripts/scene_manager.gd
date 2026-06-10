@@ -22,6 +22,8 @@ const CAMPAIGN_SELECT_SCENE := "res://scenes/campaign_select.tscn"
 const PVE_SELECT_SCENE := "res://scenes/pve_select.tscn"
 const LOBBY_SCENE := "res://scenes/lobby.tscn"
 const LEADERBOARD_SCENE := "res://scenes/leaderboard_browse.tscn"
+const COLLECTION_SCENE := "res://scenes/collection.tscn"
+const SEASON_SCENE := "res://scenes/season.tscn"
 const MATCH_SCENE := "res://scenes/prototype.tscn"
 
 # --- Networked match (PVP). The transport is owned HERE (an autoload) so it persists
@@ -87,6 +89,17 @@ func goto_pve_select() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 	_menu_change(PVE_SELECT_SCENE)
+
+# The two cosmetics homes (design/COSMETICS.md "IA — two homes, not three tabs").
+func goto_collection() -> void:
+	get_tree().paused = false
+	Engine.time_scale = 1.0
+	_menu_change(COLLECTION_SCENE)
+
+func goto_season() -> void:
+	get_tree().paused = false
+	Engine.time_scale = 1.0
+	_menu_change(SEASON_SCENE)
 
 # --- Menu screen transition (design/JUICE.md "home->select screen transition", the
 # connective tissue). SceneManager swaps scenes hard, so we snapshot the outgoing screen into

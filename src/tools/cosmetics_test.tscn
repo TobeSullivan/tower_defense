@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/cosmetics_test.gd" id="1_cos"]
+
+[node name="CosmeticsTest" type="Node"]
+script = ExtResource("1_cos")

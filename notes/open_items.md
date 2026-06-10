@@ -17,14 +17,16 @@ Status key: **OPEN** · **BLOCKED-DATA** · **PARKED** (additive, not now) · **
 - **Confirm** the free Background Creator pack actually yields path tiles before relying on it for the board slot.
 
 ## Deploy / ops (CC)
-- **Beta-season boards:** `index.js` board init needs a separate beta season + beta-flagged Trials (`ranked_s0`) so the closed beta never touches launch's `s1` (launch opens clean by construction).
-- **Beta `LOBBY_FLOOR = 2`** in `index.js` (vote path unchanged), with a **documented revert to 4 at launch**. Must not ship to launch at 2.
+- **Deploy the beta module to the box:** the `BETA = true` switch (ranked_s0 + `trials_beta_*` boards + `LOBBY_FLOOR 2`) is implemented in the repo (2026-06-09: `index.js` + mirrored client flags `LeaderboardService.BETA` / `SaveData.BUILD_SEASON`) but the box still runs the old module — `scp deploy/nakama/data/modules/index.js` over + `docker compose restart nakama`. The launch revert (flip all three flags together) is documented at each flag site; the floor-4 lock lives in `notes/decisions.md`.
 
 ## CC — carried (not blocking; do as items are promoted)
 - Export a **catapult PNG body** (`towers/catapult/` ships SVG only).
-- Import alt **mobs** (fish / slime / starfish) and alt **biomes** (beach / bog) into `src/assets/` as catalogue items are promoted. Skins live in the client render layer only — never route equipped-skin state through the match record (breaks re-sim determinism).
+- Import the **S1 track art** into `src/assets/` as items are promoted: Monster Maker recolors + fish/starfish/hammerhead mobs, forest/beach/toy-brick biomes, the FX kit pieces, wood/parchment frames, Mint Choco banner. The Collection/Season screens (built 2026-06-09) render any item with `art:""` as a placeholder tagged "import pending" — `cosmetics_catalog.gd` is the single place to point art at. Skins live in the client render layer only — never route equipped-skin state through the match record (breaks re-sim determinism).
+- **Apply equipped skins in the real match** (render layer): tower body, board biome tiles, zone tint, projectile/FX tint, mob sprite — read `SaveData.equipped_cosmetic()` at match build, client-side only. The Collection preview board already demonstrates the mapping.
 - Build the **board-sticker render layer:** chrome-edge placement, runtime outline tint per tier, animated multi-color stroke for Masters; toggle; never overlaps the play area.
-- **`src/tools/rescale_campaign.gd:18`** still targets `Vector2i(25, 14)` — should be `25, 16` (found in the 2026-06-09 audit).
+- **Task-system runtime** (`notes/task_system.md`): 5 shapes × 3 cadences, counters off match events (Trials OR Ranked), payouts 120/600/2,400 → `SaveData.add_season_points()`. The Season screen + claim flow are live and waiting on this XP source. Absolute thresholds stay playtest-gated.
+- **Post-match Season nudge** (COSMETICS.md: Season "surfaced everywhere") — small tier/progress chip on the Trials/Ranked match-end panel once tasks award points.
+- **Steam identity into the profile card** — `collection.gd._player_name()` falls back to the Nakama username; swap to Steam persona + avatar when Steam auth lands.
 - **Tutorial anchor check (playtest):** beat anchors (`score`/`respawn`/`tower`/`board`) resolving in the new right-rail HUD isn't auto-testable; `tutorial_callout._anchor_panel` still maps `score`/`upgrade_panel` to the OLD top-bar/right-dock positions — re-check against the rail layout in playtest. Also M1's blocking opener pause→resume.
 - **Low-pri cosmetic:** `design/DESIGN_MODES.md` schema block still uses literal field names `bronze_threshold`/`silver_threshold`/`gold_threshold` (these are the 1/2/3-star cutoffs). Rename to star-N someday; not worth a churn now.
 

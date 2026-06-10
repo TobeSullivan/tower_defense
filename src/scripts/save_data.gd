@@ -24,6 +24,7 @@ var data := {
 	"campaign_medals": {},  # mission_index (as String) -> "bronze"/"silver"/"gold"
 	"pve_best_scores": {},   # "window_date|tier" -> best score (local; no backend yet)
 	"ranked": {},            # {season:int, value:int (tier_base+LP), mmr:float} — seeded on first read
+	"cosmetics": {},         # {owned:[], equipped:{slot:id}, season_points:int, claimed_tiers:[]} — seeded on first read
 	"settings": {},          # backfilled from DEFAULT_SETTINGS on load
 }
 
@@ -129,6 +130,56 @@ func record_ranked_result(value_after: int, mmr_after: float) -> void:
 	r["mmr"] = mmr_after
 	data["ranked"] = r
 	save()
+
+# === Cosmetics (design/COSMETICS.md) ===
+# Owned items + equipped loadout + season-track progress. Equip state is CLIENT
+# RENDER-LAYER ONLY — never route it through the match record (cardinal rule 2:
+# it would break re-sim determinism). This file stays catalog-agnostic (raw ids;
+# defaults/validation live in CosmeticsCatalog, used by the screens) so the
+# autoload never preloads a class_name script.
+
+func _cosmetics() -> Dictionary:
+	var c = data.get("cosmetics")
+	if typeof(c) != TYPE_DICTIONARY or c.is_empty():
+		c = {"owned": [], "equipped": {}, "season_points": 0, "claimed_tiers": []}
+		data["cosmetics"] = c
+	return c
+
+func cosmetics_owned() -> Array:
+	return _cosmetics()["owned"]
+
+func grant_cosmetic(id: String) -> void:
+	var c := _cosmetics()
+	if not c["owned"].has(id):
+		c["owned"].append(id)
+		save()
+
+# Equipped id for a slot; "" = nothing explicitly equipped (callers fall back to the
+# catalog's slot default).
+func equipped_cosmetic(slot: String) -> String:
+	return String(_cosmetics()["equipped"].get(slot, ""))
+
+func equip_cosmetic(slot: String, id: String) -> void:
+	var c := _cosmetics()
+	c["equipped"][slot] = id
+	save()
+
+func season_points() -> int:
+	return int(_cosmetics().get("season_points", 0))
+
+func add_season_points(points: int) -> void:
+	var c := _cosmetics()
+	c["season_points"] = int(c.get("season_points", 0)) + points
+	save()
+
+func claimed_season_tiers() -> Array:
+	return _cosmetics()["claimed_tiers"]
+
+func claim_season_tier(tier: int) -> void:
+	var c := _cosmetics()
+	if not c["claimed_tiers"].has(tier):
+		c["claimed_tiers"].append(tier)
+		save()
 
 # === Settings ===
 

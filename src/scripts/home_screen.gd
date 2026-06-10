@@ -72,7 +72,8 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _build_season_strip() -> void:
-	# Ambient context, not a call to action: a slim pill with tier + season progress.
+	# Ambient context AND the home's door into the Season track (the "home widget" surface,
+	# design/COSMETICS.md): a slim pill with live tier + progress; click opens the Season screen.
 	var pill := PanelContainer.new()
 	_season_pill = pill
 	pill.add_theme_stylebox_override("panel", UiStyle.pill_box())
@@ -81,6 +82,10 @@ func _build_season_strip() -> void:
 	pill.anchor_top = 0.0
 	pill.offset_top = 16
 	pill.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	pill.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	pill.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			SceneManager.goto_season())
 	add_child(pill)
 
 	var margin := MarginContainer.new()
@@ -93,19 +98,23 @@ func _build_season_strip() -> void:
 	var strip := HBoxContainer.new()
 	strip.add_theme_constant_override("separation", 12)
 	strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(strip)
 
-	strip.add_child(_label("Season 1", 15, UiStyle.LABEL_COL))
+	var points: int = SaveData.season_points()
+	var CatalogScript := preload("res://scripts/cosmetics_catalog.gd")
+	strip.add_child(_label("Season %d" % CatalogScript.SEASON, 15, UiStyle.LABEL_COL))
 
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(200, 8)
-	bar.max_value = 100
-	bar.value = 0
+	bar.max_value = CatalogScript.POINTS_PER_TIER
+	bar.value = points % CatalogScript.POINTS_PER_TIER
 	bar.show_percentage = false
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	strip.add_child(bar)
 
-	strip.add_child(_label("Bronze", 15, Color("d79a52")))
+	strip.add_child(_label("Tier %d" % CatalogScript.unlocked_tier(points), 15, Color("d79a52")))
 
 func _build_center() -> void:
 	var center := CenterContainer.new()
@@ -225,6 +234,20 @@ func _build_corner_leaderboards() -> void:
 	lb.offset_bottom = -16
 	add_child(lb)
 	_corner_buttons.append(lb)
+
+	# Collection sits above Leaderboards — same corner stack, same weight.
+	var col := Button.new()
+	col.text = "Collection"
+	col.add_theme_font_size_override("font_size", 15)
+	UiStyle.style_menu_button(col)
+	col.pressed.connect(func(): SceneManager.goto_collection())
+	col.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	col.offset_left = -190
+	col.offset_top = -106
+	col.offset_right = -20
+	col.offset_bottom = -66
+	add_child(col)
+	_corner_buttons.append(col)
 
 func _build_corner_quit() -> void:
 	var quit := Button.new()
