@@ -20,7 +20,19 @@ var WINDOWS = {
 	monthly: { cron: "0 0 1 * *", duration: 2764800 },
 };
 var CAMPAIGN_MISSIONS = 5;     // matches SceneManager.CAMPAIGN_MISSION_COUNT (was 10)
-var CURRENT_SEASON = 1;        // ranked_s<N>; bump on season roll
+
+// === BETA MODE — the closed-beta switch (notes/beta_design_brief.md §2 + §4) ===
+// true  → ranked_s0 + "trials_beta_*" boards + LOBBY_FLOOR 2: beta play never touches the
+//         launch board set, so launch opens on a virgin s1 by construction (nothing to wipe)
+//         and beta data survives for analysis. Campaign all-time boards are deliberately
+//         shared (exempt — grandfather/reset-on-balance-patch covers them).
+// false → ranked_s1 + "trials_*" + floor 4 (production values).
+// AT LAUNCH: set BETA = false + `docker compose restart nakama`, and ship a client built with
+// the mirrored client flags flipped (LeaderboardService.BETA + SaveData.BUILD_SEASON) — both
+// sides must agree on board ids. MUST NOT ship to launch with this true.
+var BETA = true;
+var CURRENT_SEASON = BETA ? 0 : 1;  // ranked_s<N>; bump on season roll (launch opens at 1)
+var TRIALS_ID_PREFIX = BETA ? "trials_beta_" : "trials_";  // mirrors LeaderboardService.trials_board_id
 var RECORD_COLLECTION = "match_records";  // storage collection for re-sim re-validation
 // Per-window Trials map seeds (leaderboard_schema.md §3): SERVER-owned so a client can't pick
 // an easy map and post under the real board id, and so everyone that window shares the same 5
@@ -34,7 +46,9 @@ var MONDAY_EPOCH = 345600;  // 1970-01-05 00:00 UTC (mirrors LeaderboardService.
 // --- Forming lobby (matchmaking_orchestration.md) ---
 var LOBBY_MODULE = "lobby";
 var LOBBY_MAX = 8;     // auto-launch (no vote) when the lobby fills to this
-var LOBBY_FLOOR = 4;   // minimum present before a launch vote is allowed
+// Minimum present before a launch vote is allowed. Production = 4; the closed beta runs at 2 so
+// any two friends can queue → vote → match (vote path unchanged). Reverts with BETA at launch.
+var LOBBY_FLOOR = BETA ? 2 : 4;
 // The Godot match server clients connect to after launch (same box, UDP). Override per deploy.
 var MATCH_SERVER_HOST = "5.78.110.182";
 var MATCH_SERVER_PORT = 8771;
@@ -93,7 +107,7 @@ function _ensureTrialsTournaments(logger, nk) {
 		var cfg = WINDOWS[w];
 		for (var s = 0; s < SCALES.length; s++) {
 			for (var g = 0; g < GROUPS.length; g++) {
-				var id = "trials_" + w + "_" + SCALES[s] + "_" + GROUPS[g];
+				var id = TRIALS_ID_PREFIX + w + "_" + SCALES[s] + "_" + GROUPS[g];
 				var title = "Trials " + w + " " + SCALES[s] + " " + GROUPS[g];
 				(function (id, cron, duration, title) {
 					_create(logger, function () {

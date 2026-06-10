@@ -29,6 +29,12 @@ const WINDOW_IDS := {
 }
 const GROUPS := ["solo", "duo", "trio", "quad"]
 
+# === BETA MODE (closed beta, notes/beta_design_brief.md §4) ===
+# Mirrors `BETA` in deploy/nakama/data/modules/index.js — the two MUST flip together, along
+# with SaveData.BUILD_SEASON (0 beta / 1 launch). true → Trials ids get the beta flag
+# ("trials_beta_*") so beta play never touches the launch boards. Set false at launch.
+const BETA := true
+
 # Ranked tiers as named bands of the single ladder value = tier_base + LP (schema §4).
 # cap < 0 = uncapped (Masters). Ordered high→low for display.
 const RANKED_BANDS := [
@@ -63,7 +69,8 @@ static func scale_name(tier: int) -> String:
 	return SCALE_NAMES[clampi(tier - 1, 0, 4)]
 
 static func trials_board_id(window: int, tier: int, group: String) -> String:
-	return "trials_%s_%s_%s" % [WINDOW_IDS.get(window, "daily"), scale_id(tier), group]
+	var root := "trials_beta" if BETA else "trials"
+	return "%s_%s_%s_%s" % [root, WINDOW_IDS.get(window, "daily"), scale_id(tier), group]
 
 # The stable per-window key (also the local-score storage key + map seed salt). Kept here so
 # pve_select and the leaderboard surfaces never diverge on what "this window" means.
@@ -180,8 +187,8 @@ class LeaderboardBackend extends RefCounted:
 	func fetch_trials_rank(_board_id: String, _my_score: int) -> Dictionary:
 		return {"rank": 0}
 	# {season_label, reset_text, seasons, you, bands}. you=null when unranked.
-	func fetch_ranked(_season: int) -> Dictionary:
-		return {"season_label": "Season 1 · live", "reset_text": "", "seasons": ["Season 1"], "you": null, "bands": []}
+	func fetch_ranked(season: int) -> Dictionary:
+		return {"season_label": "Season %d · live" % season, "reset_text": "", "seasons": ["Season %d" % season], "you": null, "bands": []}
 	# {entries, my_score}.
 	func fetch_campaign(_mission: int) -> Dictionary:
 		return {"entries": [], "my_score": 0}
@@ -212,8 +219,8 @@ class LocalBackend extends LeaderboardBackend:
 	func fetch_trials_rank(_board_id: String, _my_score: int) -> Dictionary:
 		return {"rank": 1}
 
-	func fetch_ranked(_season: int) -> Dictionary:
-		return {"season_label": "Season 1 · live", "reset_text": "", "seasons": ["Season 1"], "you": null, "bands": []}
+	func fetch_ranked(season: int) -> Dictionary:
+		return {"season_label": "Season %d · live" % season, "reset_text": "", "seasons": ["Season %d" % season], "you": null, "bands": []}
 
 	func fetch_campaign(_mission: int) -> Dictionary:
 		return {"entries": [], "my_score": 0}

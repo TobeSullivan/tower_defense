@@ -22,7 +22,7 @@ var _cat: int = Cat.TRIALS
 var _window: int = MapResourceScript.WindowType.DAILY
 var _group: String = "solo"
 var _tier: int = 3
-var _season: int = 1
+var _season: int = SaveData.BUILD_SEASON  # 0 during the closed beta (ranked_s0), 1 at launch
 var _mission: int = 1
 
 var _cat_buttons: Dictionary = {}
@@ -48,6 +48,7 @@ func _apply_open_context() -> void:
 	_window = int(ctx.get("window", _window))
 	_group = String(ctx.get("group", _group))
 	_tier = int(ctx.get("tier", _tier))
+	_season = int(ctx.get("season", _season))
 	SceneManager.pending_leaderboard = {}
 
 # --- Top bar: back · title · category segmented ---
@@ -168,9 +169,9 @@ func _build_ranked_selectors() -> void:
 	var data: Dictionary = await LeaderboardService.ranked_ladder(_season)
 	var r1 := HBoxContainer.new()
 	r1.add_theme_constant_override("separation", 8)
-	var seasons: Array = data.get("seasons", ["Season 1"])
+	var seasons: Array = data.get("seasons", ["Season %d" % _season])
 	for i in range(seasons.size()):
-		var idx := i + 1
+		var idx := _season - i  # the seasons list descends from the current (requested) season
 		var b := _tab(String(seasons[i]), func(): _select(func(): _season = idx))
 		b.button_pressed = (idx == _season)
 		r1.add_child(b)

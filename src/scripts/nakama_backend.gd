@@ -213,8 +213,11 @@ func _name(rec) -> String:
 	return u if u != "" else String(rec.owner_id).substr(0, 8)
 
 func _season_list(current: int) -> Array:
+	# Descends from the current season to 1. Season 0 is the closed beta: while it's current
+	# it is the only entry; once launch rolls to s1+ it stays off the list (beta data survives
+	# server-side for analysis, not for display).
 	var out: Array = []
-	for s in range(current, 0, -1):
+	for s in range(current, mini(current, 1) - 1, -1):
 		out.append("Season %d%s" % [s, " · live" if s == current else ""])
 	return out
 

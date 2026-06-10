@@ -99,10 +99,18 @@ func _pve_key(window_date: String, tier: int) -> String:
 # submit. Steam Cloud syncs this later. Seeded lazily so a brand-new player starts at Bronze 0
 # with a neutral hidden MMR (RankedLadder.SEED_MMR).
 
+# Season this build posts to (ranked_s<N>): 0 = closed beta, 1 = launch. Mirrors BETA in
+# leaderboard_service.gd + deploy/nakama/data/modules/index.js — all three flip together.
+const BUILD_SEASON := 0
+
 func _ranked() -> Dictionary:
 	var r = data.get("ranked")
-	if typeof(r) != TYPE_DICTIONARY or r.is_empty():
-		r = {"season": 1, "value": RankedLadder.START_VALUE, "mmr": RankedLadder.SEED_MMR}
+	if typeof(r) != TYPE_DICTIONARY or r.is_empty() or int(r.get("season", -1)) != BUILD_SEASON:
+		# Fresh seed — also taken when a save crosses a season boundary (dev save → beta build,
+		# beta save → launch), so scores post to this build's ranked_s<BUILD_SEASON>. The
+		# launch-era season roll (one-tier drop, notes/decisions.md) is a separate, later,
+		# server-driven mechanism — this only keeps the local store on the build's season.
+		r = {"season": BUILD_SEASON, "value": RankedLadder.START_VALUE, "mmr": RankedLadder.SEED_MMR}
 		data["ranked"] = r
 	return r
 
@@ -113,7 +121,7 @@ func ranked_mmr() -> float:
 	return float(_ranked().get("mmr", RankedLadder.SEED_MMR))
 
 func ranked_season() -> int:
-	return int(_ranked().get("season", 1))
+	return int(_ranked().get("season", BUILD_SEASON))
 
 func record_ranked_result(value_after: int, mmr_after: float) -> void:
 	var r := _ranked()

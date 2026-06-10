@@ -2,14 +2,17 @@ extends Node
 
 # Live verify of NakamaBackend against the box :7350 — proves the 3 leaderboard surfaces light
 # up with REAL server data through LeaderboardService. Seeds a small field (3 bot accounts + me)
-# on a DAILY trials board (self-purges at the UTC reset), campaign_m01, and ranked_s1, then reads
+# on a DAILY trials board (self-purges at the UTC reset), campaign_m01, and the build's ranked
+# season board, then reads
 # back through the service (now on NakamaBackend) and asserts ranks / neighborhood / banding.
 # Run by swapping run/main_scene to res://tools/nakama_backend_test.tscn. Test records are deleted
 # afterward by the SSH cleanup step in the session (psql), so boards return to empty.
 
-const TRIALS := "trials_daily_thread_solo"   # = trials_board_id(DAILY, 1, "solo")
+# Board ids follow the build's beta flags (LeaderboardService.BETA / SaveData.BUILD_SEASON) so
+# this harness exercises whichever board set the box currently serves (beta or launch).
+var TRIALS: String = LeaderboardService.trials_board_id(0, 1, "solo")  # daily/thread/solo
 const CAMP := "campaign_m01"
-const RANKED := "ranked_s1"
+var RANKED: String = "ranked_s%d" % SaveData.BUILD_SEASON
 
 var _fails := 0
 

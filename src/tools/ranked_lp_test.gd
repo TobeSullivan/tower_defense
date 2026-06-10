@@ -102,7 +102,8 @@ func _test_surface2() -> void:
 	LeaderboardService.set_backend(LeaderboardService.LocalBackend.new())  # offline: submit is a no-op
 	# Known pre-match state: Gold 50, MMR == lobby avg (factor 1.0).
 	var saved = SaveData.data.get("ranked", {}).duplicate(true)
-	SaveData.data["ranked"] = {"season": 1, "value": 250, "mmr": 200.0}
+	# Seed on the build's season — any other season is (correctly) reset to fresh by _ranked().
+	SaveData.data["ranked"] = {"season": SaveData.BUILD_SEASON, "value": 250, "mmr": 200.0}
 	SceneManager.pending_ranked_avg_mmr = 200.0
 
 	var coord := FakeCoord.new()

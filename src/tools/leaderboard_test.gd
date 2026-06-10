@@ -46,8 +46,9 @@ func _test_service_logic() -> void:
 	print("service logic:")
 	_check("scale_name(3) = Tangle", LeaderboardService.scale_name(3), "Tangle")
 	_check("scale_id(5) = knot", LeaderboardService.scale_id(5), "knot")
-	_check("board id format", LeaderboardService.trials_board_id(MapResourceScript.WindowType.DAILY, 3, "solo"), "trials_daily_tangle_solo")
-	_check("board id weekly/knot/quad", LeaderboardService.trials_board_id(MapResourceScript.WindowType.WEEKLY, 5, "quad"), "trials_weekly_knot_quad")
+	var root := "trials_beta" if LeaderboardService.BETA else "trials"  # beta flag moves the id root
+	_check("board id format", LeaderboardService.trials_board_id(MapResourceScript.WindowType.DAILY, 3, "solo"), root + "_daily_tangle_solo")
+	_check("board id weekly/knot/quad", LeaderboardService.trials_board_id(MapResourceScript.WindowType.WEEKLY, 5, "quad"), root + "_weekly_knot_quad")
 	_check("window_word daily", LeaderboardService.window_word(MapResourceScript.WindowType.DAILY), "today")
 	_check("window_word monthly", LeaderboardService.window_word(MapResourceScript.WindowType.MONTHLY), "this month")
 	# Ranked tier bands (value = tier_base + LP).
@@ -177,6 +178,8 @@ class SampleBackend extends RefCounted:
 		]}
 	func fetch_trials_rank(_board_id: String, _my_score: int) -> Dictionary:
 		return {"rank": 14}
+	func fetch_trials_seeds() -> Dictionary:
+		return {}  # empty → callers fall back to the local window-identity derivation
 	func fetch_ranked(_season: int) -> Dictionary:
 		return {
 			"season_label": "Season 2 · live", "reset_text": "18 days left",

@@ -1,25 +1,25 @@
 extends SceneTree
 
-# One-off migration: rescale the 10 hand-authored campaign maps from the dead
-# 20x11 board to the locked 23x14 board (2026-06-06 board-size lock). Run headless:
+# HISTORICAL — DO NOT RUN. One-off migration that rescaled the hand-authored
+# campaign maps from the dead 20x11 board toward the locked 25x16 board. The five
+# missions (M1-M5) have since been RE-AUTHORED at 25x16 in the map editor, so this
+# script's premise no longer holds: running it would corrupt them. Kept as reference
+# for the scale+revalidate approach (proportional cell scaling, star-threshold
+# rescale via the game's own pathfinder, footprint clamping, path validation).
 #
 #   godot --headless --script res://tools/rescale_campaign.gd
 #
-# For each mission_*.tres it scales every cell coordinate proportionally, pins the
-# new grid_size, scales the medal thresholds by the real maze-length growth (via the
-# game's own pathfinder), validates the result, and saves in place. supply_cap /
-# round_count / mob_count are intentionally left alone — the economy re-tune for the
-# bigger board is a separately-deferred design item. Idempotency note: this assumes
-# the .tres are still at 20x11; do not run it twice.
+# supply_cap / round_count / mob_count were intentionally left alone — the economy
+# re-tune for the bigger board is a separately-deferred design item.
 
 const PathfinderScript := preload("res://scripts/pathfinder.gd")
 
 const OLD := Vector2i(20, 11)
-const NEW := Vector2i(25, 14)
+const NEW := Vector2i(25, 16)
 
 func _init() -> void:
-	var sx := float(NEW.x) / float(OLD.x)   # 1.15
-	var sy := float(NEW.y) / float(OLD.y)   # ~1.2727
+	var sx := float(NEW.x) / float(OLD.x)   # 1.25
+	var sy := float(NEW.y) / float(OLD.y)   # ~1.4545
 
 	var dir := "res://campaign/"
 	var names := []
