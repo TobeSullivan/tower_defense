@@ -102,15 +102,15 @@ const ITEMS := [
 
 	# --- Ranked prestige bundle (COSMETICS.md): Title + Frame + Rank Sticker per season
 	#     placement, scaled by tier. Ranked-exclusive — never on the track, never buyable. ---
+	{"id": "title_stone", "slot": "title", "name": "Stone", "rarity": "prestige", "hint": "Ranked · Stone placement"},
 	{"id": "title_bronze", "slot": "title", "name": "Bronze", "rarity": "prestige", "hint": "Ranked · Bronze placement"},
 	{"id": "title_silver", "slot": "title", "name": "Silver", "rarity": "prestige", "hint": "Ranked · Silver placement"},
 	{"id": "title_gold", "slot": "title", "name": "Gold", "rarity": "prestige", "hint": "Ranked · Gold placement"},
-	{"id": "title_platinum", "slot": "title", "name": "Platinum", "rarity": "prestige", "hint": "Ranked · Platinum placement"},
 	{"id": "title_masters", "slot": "title", "name": "Masters", "rarity": "prestige", "hint": "Ranked · Masters placement"},
+	{"id": "frame_stone", "slot": "frame", "name": "Stone frame", "rarity": "prestige", "tint": Color("9099a0"), "hint": "Ranked · Stone placement"},
 	{"id": "frame_bronze", "slot": "frame", "name": "Bronze frame", "rarity": "prestige", "tint": Color("d79a52"), "hint": "Ranked · Bronze placement"},
 	{"id": "frame_silver", "slot": "frame", "name": "Silver frame", "rarity": "prestige", "tint": Color("c0c8d0"), "hint": "Ranked · Silver placement"},
 	{"id": "frame_gold", "slot": "frame", "name": "Gold frame", "rarity": "prestige", "tint": Color("b38e2c"), "hint": "Ranked · Gold placement"},
-	{"id": "frame_platinum", "slot": "frame", "name": "Platinum frame", "rarity": "prestige", "tint": Color("8ad0d0"), "hint": "Ranked · Platinum placement"},
 	{"id": "frame_masters", "slot": "frame", "name": "Masters frame", "rarity": "prestige", "tint": Color("e0c060"), "hint": "Ranked · Masters placement"},
 	{"id": "sticker_rect_s1", "slot": "sticker", "name": "Rectangle (S1)", "rarity": "prestige", "tint": Color("b38e2c"), "hint": "Ranked · season placement"},
 ]

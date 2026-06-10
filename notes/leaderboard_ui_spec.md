@@ -31,7 +31,7 @@ Sits **inside** the v3 victory panel, below the tier strip — one result screen
 ## Surface 2 — Ranked post-match placement
 The result screen itself; **no stars / tier strip** (PVP has no medals).
 - "You finished **2nd** of 8" (placement from re-sim elimination order).
-- LP block: tier + `47 → 77` + `+30 LP` chip + progress bar + "23 LP to Platinum".
+- LP block: tier + `47 → 77` + `+30 LP` chip + progress bar + "23 LP to Gold".
 - **Global rank delta:** `#41 → #34` (the climbed-places number — the satisfying one).
 - **Final order** rows (1–8), reusing the arena row style; eliminated/disconnected show
   `OUT`. Your row highlighted.
@@ -50,10 +50,10 @@ Top: category segmented `Trials · Ranked · Campaign`.
 
 **Ranked** (`ranked_ladder_bands.html` — the canonical layout):
 - Season selector: current `Season N · live` + past frozen seasons. **No future.**
-- "Your standing" header: tier · LP (primary) + `#34 of 100` (secondary) + Platinum
-  progress bar.
-- **One continuous ladder, 1→N**, with **band headers** (Masters/Platinum/Gold/Silver/
-  Bronze) dividing it. Row: global rank + name + `<tier> · <LP>` (Masters shows raw LP).
+- "Your standing" header: tier · LP (primary) + `#34 of 100` (secondary) + tier-progress
+  bar.
+- **One continuous ladder, 1→N**, with **band headers** (Masters/Gold/Silver/Bronze/
+  Stone) dividing it. Row: global rank + name + `<tier> · <LP>` (Masters shows raw LP).
   Your row green-highlighted. Top + neighborhood, jump divider.
 - Past season view = frozen final top-N + your recorded result.
 

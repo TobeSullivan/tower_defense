@@ -117,13 +117,13 @@ Placement = elimination order. Last standing = 1st.
 
 LP (league points) awarded per placement. Top placements gain LP, bottom placements lose LP, with the amount scaling by exact finish position. 1st gains the most; 8th loses the most. **Full LP/MMR/tier/season spec: `notes/pvp_ladder.md`** (MMR-anchored net-positive ladder, base LP table, demotion buffer, season reset). Numbers there are playtest dials; the shape is locked.
 
-**Rank tiers:** Bronze → Silver → Gold → Platinum → Masters.
+**Rank tiers:** Stone → Bronze → Silver → Gold → Masters.
 
 LP accumulates within a tier. Reaching the threshold promotes to the next tier. Falling to zero in a tier demotes.
 
 ### Season resets
 
-At the end of each season, every player's rank drops one tier. Masters → Platinum, Platinum → Gold, etc. Bronze stays Bronze.
+At the end of each season, every player's rank drops one tier. Masters → Gold, Gold → Silver, etc. Stone stays Stone.
 
 History is preserved. Season leaderboards are viewable indefinitely after the season ends.
 

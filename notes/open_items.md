@@ -42,13 +42,6 @@ $9.40). Full reasoning in `design/SEASON.md` + `notes/board_obstacle_model.md`. 
 - **Optional:** expose per-board path recolor (`road_renderer` already has the 3 Color exports) so a
   low-contrast ground can shift the path colour instead of needing new art.
 
-## Ranked tier rename (CC find/replace)
-Tiers renamed **Stone → Bronze → Silver → Gold → Masters** (was Bronze/Silver/Gold/Platinum/
-Masters). **Pure rename — ladder scale/LP/demotion/MMR/resim all unchanged.** Propagate the names
-through `pvp_ladder.md`, `leaderboards.md`, `ghost_ladder.md`, and the prestige bundle in
-`cosmetics_catalog.gd` (`title_*` / `frame_*`). League-badge art maps 1:1 by name (pack's diamond →
-Masters; wood unused). *(Promote to `decisions.md`.)*
-
 ## Deploy / ops (CC)
 - **Deploy the beta module to the box:** the `BETA = true` switch (ranked_s0 + `trials_beta_*` boards + `LOBBY_FLOOR 2`) is implemented in the repo (2026-06-09: `index.js` + mirrored client flags `LeaderboardService.BETA` / `SaveData.BUILD_SEASON`) but the box still runs the old module — `scp deploy/nakama/data/modules/index.js` over + `docker compose restart nakama`. The launch revert (flip all three flags together) is documented at each flag site; the floor-4 lock lives in `notes/decisions.md`.
 

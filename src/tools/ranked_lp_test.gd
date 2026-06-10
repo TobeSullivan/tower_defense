@@ -2,7 +2,7 @@ extends Node
 
 # Ranked LP / MMR engine + Surface 2 verification (notes/pvp_ladder.md + leaderboard_ui_spec.md §2).
 # PASS 1: RankedLadder.resolve — base table (count 8 + percentile N<8), MMR factor amplify/dampen,
-#         promotion, demotion buffer, Bronze floor, Masters no-demote-out + uncapped, MMR direction.
+#         promotion, demotion buffer, Stone floor, Masters no-demote-out + uncapped, MMR direction.
 # PASS 2: Surface 2 builds against a fake match (LP block + final-order rows) and persists the value.
 # Drive headlessly: godot --headless --path src res://tools/ranked_lp_test.tscn
 # (Screenshots are a separate windowed harness, res://tools/ranked_shot.tscn — headless renders blank.)
@@ -38,7 +38,7 @@ func _check_true(label: String, cond: bool) -> void:
 
 # At equilibrium (mmr == lobby avg → factor 1.0) the earned LP is exactly the base table.
 func _test_base_table() -> void:
-	var v := 250  # Gold 50 (not Masters): clear of every boundary so earned == value change
+	var v := 250  # Silver 50 (not Masters): clear of every boundary so earned == value change
 	for row in [[1, 45], [2, 30], [3, 18], [4, 8], [5, -8], [6, -18], [7, -30], [8, -45]]:
 		var r := RankedLadder.resolve(int(row[0]), 8, v, 200.0, 200.0)
 		_check("base LP place %d of 8" % int(row[0]), int(r["earned"]), int(row[1]))
@@ -65,22 +65,22 @@ func _test_mmr_factor() -> void:
 	_check("above-skill 8th amplified (−45→−68)", int(above_loss["earned"]), -68)
 
 func _test_boundaries() -> void:
-	# Promotion: Bronze 95 + 45 → Silver 40.
+	# Promotion: Stone 95 + 45 → Bronze 40.
 	var promo := RankedLadder.resolve(1, 8, 95, 200.0, 200.0)
 	_check("promo value", int(promo["value_after"]), 140)
-	_check("promo tier", String(promo["tier_after"]), "Silver")
+	_check("promo tier", String(promo["tier_after"]), "Bronze")
 	_check("promo lp_after", int(promo["lp_after"]), 40)
 	_check_true("promoted flag", bool(promo["promoted"]))
-	# Demotion buffer: Silver 0 (100) loses → lands at Bronze 75 (75), not the raw value.
+	# Demotion buffer: Bronze 0 (100) loses → lands at Stone 75 (75), not the raw value.
 	var demo := RankedLadder.resolve(8, 8, 100, 200.0, 200.0)
-	_check("demote landing = Bronze 75", int(demo["value_after"]), 75)
-	_check("demote tier", String(demo["tier_after"]), "Bronze")
+	_check("demote landing = Stone 75", int(demo["value_after"]), 75)
+	_check("demote tier", String(demo["tier_after"]), "Stone")
 	_check("demote lp_after", int(demo["lp_after"]), 75)
 	_check_true("demoted flag", bool(demo["demoted"]))
-	# Bronze floor: can't fall below 0.
+	# Stone floor: can't fall below 0.
 	var floor_r := RankedLadder.resolve(8, 8, 10, 200.0, 200.0)
-	_check("Bronze floors at 0", int(floor_r["value_after"]), 0)
-	_check_true("Bronze floor not flagged a demotion", not bool(floor_r["demoted"]))
+	_check("Stone floors at 0", int(floor_r["value_after"]), 0)
+	_check_true("Stone floor not flagged a demotion", not bool(floor_r["demoted"]))
 	# Masters: no demotion out mid-season (floors at 400), gains uncapped.
 	var mas_loss := RankedLadder.resolve(8, 8, 410, 300.0, 300.0)
 	_check("Masters no demote out (floor 400)", int(mas_loss["value_after"]), 400)
@@ -100,7 +100,7 @@ func _test_mmr_update() -> void:
 
 func _test_surface2() -> void:
 	LeaderboardService.set_backend(LeaderboardService.LocalBackend.new())  # offline: submit is a no-op
-	# Known pre-match state: Gold 50, MMR == lobby avg (factor 1.0).
+	# Known pre-match state: Silver 50, MMR == lobby avg (factor 1.0).
 	var saved = SaveData.data.get("ranked", {}).duplicate(true)
 	# Seed on the build's season — any other season is (correctly) reset to fresh by _ranked().
 	SaveData.data["ranked"] = {"season": SaveData.BUILD_SEASON, "value": 250, "mmr": 200.0}
@@ -118,7 +118,7 @@ func _test_surface2() -> void:
 
 	_check_true("Surface 2 panel visible", panel._panel.visible)
 	_check_true("LP block + final order populated", panel._lb_vbox.get_child_count() >= 10)
-	# Persisted the new authoritative ladder value (Gold 50 + 30 for 2nd = Gold 80 = 280).
+	# Persisted the new authoritative ladder value (Silver 50 + 30 for 2nd = Silver 80 = 280).
 	_check("ranked value persisted (2nd of 8)", SaveData.ranked_value(), 280)
 
 	panel.queue_free()

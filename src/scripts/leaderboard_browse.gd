@@ -378,10 +378,10 @@ func _rank_col(is_me: bool) -> Color:
 func _band_color(tag: String) -> Color:
 	match tag:
 		"mas": return UiStyle.PILL_GOLD
-		"plat": return Color("7d8a6a")
 		"gold": return Color("9c7c2a")
 		"sil": return Color("5d6a4f")
-		_: return UiStyle.SELL_BG  # bronze ~ terracotta
+		"brz": return UiStyle.SELL_BG  # bronze ~ terracotta
+		_: return Color("6b6f76")  # stone ~ neutral grey
 
 func _tab(text: String, on_pressed: Callable) -> Button:
 	var b := Button.new()

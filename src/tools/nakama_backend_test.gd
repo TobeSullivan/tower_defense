@@ -57,8 +57,8 @@ func _run() -> void:
 	s = await _submit(client, b0, "campaign", CAMP, 142000) and s
 	s = await _submit(client, me, "campaign", CAMP, 88000) and s
 	s = await _submit(client, b0, "ranked", RANKED, 2240) and s   # Masters 1840
-	s = await _submit(client, b1, "ranked", RANKED, 277) and s    # Gold 77
-	s = await _submit(client, me, "ranked", RANKED, 250) and s    # Gold 50
+	s = await _submit(client, b1, "ranked", RANKED, 277) and s    # Silver 77
+	s = await _submit(client, me, "ranked", RANKED, 250) and s    # Silver 50
 	_ok("all submit_score RPCs ok", s)
 
 	# --- Reads through LeaderboardService (NakamaBackend active) ---
@@ -88,15 +88,15 @@ func _run() -> void:
 	var you = rl.get("you", null)
 	_ok("you not null", you != null)
 	if you != null:
-		_ok("you.tier == Gold", String(you.get("tier", "")) == "Gold")
+		_ok("you.tier == Silver", String(you.get("tier", "")) == "Silver")
 		_ok("you.lp == 50", int(you.get("lp", -1)) == 50)
 		_ok("you.rank == 3", int(you.get("rank", 0)) == 3)
 		_ok("you.to_next == 50", int(you.get("to_next", -1)) == 50)
-		_ok("you.next_tier == Platinum", String(you.get("next_tier", "")) == "Platinum")
+		_ok("you.next_tier == Gold", String(you.get("next_tier", "")) == "Gold")
 	var bands: Array = rl.get("bands", [])
 	_ok("bands >= 2", bands.size() >= 2)
 	_ok("Masters band present", _has_band(bands, "Masters"))
-	_ok("Gold band has >= 2 rows", _band_rows(bands, "Gold") >= 2)
+	_ok("Silver band has >= 2 rows", _band_rows(bands, "Silver") >= 2)
 
 	if _fails == 0:
 		print("RESULT OK — surfaces light up with real Nakama data (trials/campaign/ranked)")

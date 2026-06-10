@@ -112,7 +112,7 @@ rightly resent it). Thin queues are solved instead by:
 - **Shrink the lobby (8 → 6 → 4).** The coordinator already runs variable board
   counts (`pending_board_count`), so a 6- or 4-player match is the same code with a
   smaller number. Essentially free.
-- **Widen rank bands under load (bronze vs plat).** A matchmaking *rule*: after N
+- **Widen rank bands under load (stone vs gold).** A matchmaking *rule*: after N
   seconds queued, expand the acceptable LP range. Nakama's matchmaker does this
   natively. Also free.
 

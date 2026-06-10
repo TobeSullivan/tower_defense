@@ -91,7 +91,7 @@ ranked_s<season>     e.g. ranked_s1, ranked_s2
 - Type: leaderboard, one per season. Sort **descending** by a **monotonic ladder value**,
   operator `set` (the player's current authoritative value, not a max).
 - **Ladder value = tier_base + LP**, so the single sort key spans all tiers:
-  - Bronze 0–99 · Silver 100–199 · Gold 200–299 · Platinum 300–399 · **Masters 400+
+  - Stone 0–99 · Bronze 100–199 · Silver 200–299 · Gold 300–399 · **Masters 400+
     (uncapped)**.
   - Global rank = position in this sort. **Bands fall out of the value ranges.**
 - The LP/MMR engine in `notes/pvp_ladder.md` is **unchanged** — this is purely how we

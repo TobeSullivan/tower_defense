@@ -74,21 +74,21 @@ class SampleBackend extends RefCounted:
 		return {
 			"season_label": "Season 2 · live", "reset_text": "18 days left",
 			"seasons": ["Season 2 · live", "Season 1"],
-			"you": {"tier": "Gold", "lp": 77, "rank": 34, "total": 100, "to_next": 23, "next_tier": "Platinum"},
+			"you": {"tier": "Silver", "lp": 77, "rank": 34, "total": 100, "to_next": 23, "next_tier": "Gold"},
 			"bands": [
 				{"name": "Masters", "tag": "mas", "rows": [
 					{"rank": 1, "name": "apex_builder", "tier": "Masters", "lp": 1840, "is_me": false},
 					{"rank": 2, "name": "grid_goblin", "tier": "Masters", "lp": 1612, "is_me": false}]},
-				{"name": "Platinum", "tag": "plat", "rows": [
-					{"rank": 4, "name": "knotzero", "tier": "Platinum", "lp": 92, "is_me": false}]},
 				{"name": "Gold", "tag": "gold", "rows": [
-					{"rank": 33, "name": "mazewright", "tier": "Gold", "lp": 80, "is_me": false},
-					{"rank": 34, "name": "you", "tier": "Gold", "lp": 77, "is_me": true},
-					{"rank": 35, "name": "creepkiller_99", "tier": "Gold", "lp": 71, "is_me": false}]},
+					{"rank": 4, "name": "knotzero", "tier": "Gold", "lp": 92, "is_me": false}]},
 				{"name": "Silver", "tag": "sil", "rows": [
-					{"rank": 47, "name": "weaver_jr", "tier": "Silver", "lp": 83, "is_me": false}]},
+					{"rank": 33, "name": "mazewright", "tier": "Silver", "lp": 80, "is_me": false},
+					{"rank": 34, "name": "you", "tier": "Silver", "lp": 77, "is_me": true},
+					{"rank": 35, "name": "creepkiller_99", "tier": "Silver", "lp": 71, "is_me": false}]},
 				{"name": "Bronze", "tag": "brz", "rows": [
-					{"rank": 79, "name": "fresh_thread", "tier": "Bronze", "lp": 40, "is_me": false}]},
+					{"rank": 47, "name": "weaver_jr", "tier": "Bronze", "lp": 83, "is_me": false}]},
+				{"name": "Stone", "tag": "stn", "rows": [
+					{"rank": 79, "name": "fresh_thread", "tier": "Stone", "lp": 40, "is_me": false}]},
 			]}
 	func fetch_campaign(_mission: int) -> Dictionary:
 		return {"my_score": 88000, "entries": [

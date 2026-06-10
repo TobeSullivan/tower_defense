@@ -39,10 +39,10 @@ const BETA := true
 # cap < 0 = uncapped (Masters). Ordered high→low for display.
 const RANKED_BANDS := [
 	{"name": "Masters", "tag": "mas", "base": 400, "cap": -1},
-	{"name": "Platinum", "tag": "plat", "base": 300, "cap": 399},
-	{"name": "Gold", "tag": "gold", "base": 200, "cap": 299},
-	{"name": "Silver", "tag": "sil", "base": 100, "cap": 199},
-	{"name": "Bronze", "tag": "brz", "base": 0, "cap": 99},
+	{"name": "Gold", "tag": "gold", "base": 300, "cap": 399},
+	{"name": "Silver", "tag": "sil", "base": 200, "cap": 299},
+	{"name": "Bronze", "tag": "brz", "base": 100, "cap": 199},
+	{"name": "Stone", "tag": "stn", "base": 0, "cap": 99},
 ]
 
 const WEEK_SECONDS := 604800
@@ -127,7 +127,7 @@ static func ranked_tier(value: int) -> Dictionary:
 	for band in RANKED_BANDS:
 		if value >= int(band["base"]):
 			return {"name": band["name"], "tag": band["tag"], "lp": value - int(band["base"])}
-	return {"name": "Bronze", "tag": "brz", "lp": 0}
+	return {"name": "Stone", "tag": "stn", "lp": 0}
 
 # --- Surface reads (delegate the row fetch to the backend) -------------------
 

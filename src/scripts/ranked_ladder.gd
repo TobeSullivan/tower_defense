@@ -14,7 +14,7 @@ class_name RankedLadder
 #
 # EVERY number below is a playtest DIAL (pvp_ladder.md "Playtest dials"); only the structural
 # shape is locked — steep-extremes placement curve, MMR amplify/dampen, two-phase climb
-# (net-positive Bronze→Platinum, honest/uncapped Masters), stickiness floors below Masters.
+# (net-positive Stone→Gold, honest/uncapped Masters), stickiness floors below Masters.
 
 const LeaderboardService := preload("res://scripts/leaderboard_service.gd")
 

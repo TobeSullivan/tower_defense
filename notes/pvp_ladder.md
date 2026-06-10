@@ -1,7 +1,7 @@
 # PVP ladder (Ranked) — LP, MMR, tiers, season
 
 Locked 2026-06-05 (design session 2). Supersedes the "Exact LP curve TBD" line in
-`DESIGN_MODES.md`. The tier list (Bronze → Silver → Gold → Platinum → Masters),
+`DESIGN_MODES.md`. The tier list (Stone → Bronze → Silver → Gold → Masters),
 placement = elimination order (last standing = 1st), promote-at-threshold /
 demote-at-zero, and "season reset drops one tier" are already locked in
 `DESIGN_MODES.md`; this note fills in the numbers underneath them.
@@ -63,18 +63,18 @@ below — which is how you get net-positive-low, honest-high.
 Flat 100 LP per tier, **no sub-divisions** (fits the minimalism ethos; the MMR engine
 handles pacing).
 
-| Tier     | Band     | On reaching 100 |
-|----------|----------|-----------------|
-| Bronze   | 0–99     | → Silver        |
-| Silver   | 0–99     | → Gold          |
-| Gold     | 0–99     | → Platinum      |
-| Platinum | 0–99     | → **Masters**   |
-| Masters  | uncapped | leaderboard-ranked |
+| Tier    | Band     | On reaching 100 |
+|---------|----------|-----------------|
+| Stone   | 0–99     | → Bronze        |
+| Bronze  | 0–99     | → Silver        |
+| Silver  | 0–99     | → Gold          |
+| Gold    | 0–99     | → **Masters**   |
+| Masters | uncapped | leaderboard-ranked |
 
 - Promotion at 100 LP.
 - **Demotion at 0 LP drops you to 75 LP of the lower tier** (buffer so you don't
   ping-pong on the boundary).
-- Bronze floors at 0 — you can't fall out of the game.
+- Stone floors at 0 — you can't fall out of the game.
 
 Shape this produces: a strong player rockets to their skill tier in ~15–20 games (fast,
 good for a small pool), bounces off the tier above, then the *real* grind is inside
@@ -91,8 +91,8 @@ Masters — uncapped and leaderboard-ranked. **Fast to your floor, infinite at t
 
 ## Season reset
 
-Locked as "drop one tier." Land at **25 LP of the dropped tier** (Masters → Platinum 25,
-etc.) so there's immediate headroom. Bronze stays Bronze. History preserved (Nakama
+Locked as "drop one tier." Land at **25 LP of the dropped tier** (Masters → Gold 25,
+etc.) so there's immediate headroom. Stone stays Stone. History preserved (Nakama
 tournaments / season boards viewable indefinitely).
 
 ---
@@ -101,14 +101,14 @@ tournaments / season boards viewable indefinitely).
 
 - Exact base-table numbers (the *shape* matters more than ±5).
 - MMR factor range (the 0.5–1.5).
-- The 100-LP tier width (could go 100/100/100/150 if Platinum feels too easy on real data).
+- The 100-LP tier width (could go 100/100/100/150 if Gold feels too easy on real data).
 
 ## Structural — locked now
 
 - Curve shape (cheap-ish placement spread, steeper extremes).
 - MMR-anchoring (hidden MMR + visible LP — the "two numbers" cost was accepted as
   worth it for getting the spine right; leans on Nakama's leaderboard/MMR handling).
-- Two-phase climb/compete split (net-positive Bronze→Platinum, honest/uncapped Masters).
+- Two-phase climb/compete split (net-positive Stone→Gold, honest/uncapped Masters).
 - The stickiness floors below Masters; off in Masters.
 
 ## Still open (small)

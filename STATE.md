@@ -23,12 +23,14 @@ Audited the full S1 asset list section by section against top-down + the *real* 
 - Aquatic mobs (fish/starfish/hammerhead, T6/16/27) confirmed **owned**; perspective check pending.
 
 ## Next step
-1. **CC, S1 implementation** (see `notes/open_items.md` "S1 cosmetic sourcing"): slice Suburbia
-   ground + footprint-tag props; confirm MP obstacle seed is deterministic before growing the
-   library; wire Beach, recolor Forest off Summer; re-base mob recolors off undead; render-check the
-   aquatic mobs; retag T26; apply equipped skins in the real match.
-2. **CC, ranked rename** find/replace across `pvp_ladder.md`/`leaderboards.md`/`ghost_ladder.md` +
-   the prestige bundle in `cosmetics_catalog.gd`.
+1. **CC, S1 implementation** (see `notes/open_items.md` "S1 cosmetic sourcing"). **Done 2026-06-10:**
+   Suburbia ground (red-brick) + retag T26; Forest (baked pine recolor); obstacle determinism gate
+   CLEARED. **Remaining:** footprint-tag Suburbia props + build the obstacle library; bespoke FX
+   (fireball/ice) + owned-bench FX; mob recolors off undead; aquatic-mob render check; apply equipped
+   skins in the real match. **Beach BLOCKED** — Tiki art not uploaded.
+2. **CC, ranked rename — DONE 2026-06-10.** Stone/Bronze/Silver/Gold/Masters across
+   `leaderboard_service`/`cosmetics_catalog`/`leaderboard_browse` + all tests + docs; promoted to
+   `decisions.md`. (`ghost_ladder.md` correctly excluded — its Bronze/Silver/Gold are star medals.)
 3. **Steam (blocked on verification):** clears → create Wend App ID → create Playtest app
    (confidential/friends-only; hidden page, manual keys). Confirm entity type at registration.
 4. **Design (own session):** finalize season-pass absolute threshold integers once playtest data
@@ -44,8 +46,5 @@ Audited the full S1 asset list section by section against top-down + the *real* 
 ## Open questions / blocked on
 - **Steam:** identity verification pending (2–7 biz days from 2026-06-07). Confirm entity type.
 - **Aquatic-mob perspective** — fish/starfish/hammerhead read on a top-down board? CC render check.
-- **Obstacle MP seed** — confirm deterministic + resim-fed before the prop library grows.
 - **Absolute task thresholds** (the X integers) — playtest-gated.
-- **Promote to `decisions.md`** (next session): the ranked tier rename + the obstacle-determinism
-  rule (both must-not-reverse).
 - Full open backlog in `notes/open_items.md`.

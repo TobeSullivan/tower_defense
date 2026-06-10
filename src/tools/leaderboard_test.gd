@@ -52,8 +52,9 @@ func _test_service_logic() -> void:
 	_check("window_word daily", LeaderboardService.window_word(MapResourceScript.WindowType.DAILY), "today")
 	_check("window_word monthly", LeaderboardService.window_word(MapResourceScript.WindowType.MONTHLY), "this month")
 	# Ranked tier bands (value = tier_base + LP).
-	_check("value 77 → Bronze 77 (sub-100)", LeaderboardService.ranked_tier(77), {"name": "Bronze", "tag": "brz", "lp": 77})
-	_check("value 277 → Gold 77", LeaderboardService.ranked_tier(277), {"name": "Gold", "tag": "gold", "lp": 77})
+	_check("value 77 → Stone 77 (sub-100)", LeaderboardService.ranked_tier(77), {"name": "Stone", "tag": "stn", "lp": 77})
+	_check("value 177 → Bronze 77", LeaderboardService.ranked_tier(177), {"name": "Bronze", "tag": "brz", "lp": 77})
+	_check("value 277 → Silver 77", LeaderboardService.ranked_tier(277), {"name": "Silver", "tag": "sil", "lp": 77})
 	_check("value 2240 → Masters 1840", LeaderboardService.ranked_tier(2240), {"name": "Masters", "tag": "mas", "lp": 1840})
 	# Countdown text is computed (non-empty, well-formed) for each window.
 	for wt in [MapResourceScript.WindowType.DAILY, MapResourceScript.WindowType.WEEKLY, MapResourceScript.WindowType.MONTHLY]:
@@ -184,7 +185,7 @@ class SampleBackend extends RefCounted:
 		return {
 			"season_label": "Season 2 · live", "reset_text": "18 days left",
 			"seasons": ["Season 2 · live", "Season 1"],
-			"you": {"tier": "Gold", "lp": 77, "rank": 34, "total": 100, "to_next": 23, "next_tier": "Platinum"},
+			"you": {"tier": "Gold", "lp": 77, "rank": 34, "total": 100, "to_next": 23, "next_tier": "Masters"},
 			"bands": [
 				{"name": "Masters", "tag": "mas", "rows": [
 					{"rank": 1, "name": "apex_builder", "tier": "Masters", "lp": 1840, "is_me": false}]},

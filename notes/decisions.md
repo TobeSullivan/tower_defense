@@ -20,7 +20,7 @@ near the top of each group; date in parens is when it locked.
 - **Modes: Trials (PVE) · Ranked (PVP).** (2026-06-05)
 - **Trials scale names: Thread · Weave · Tangle · Snarl · Knot** (1→5). (2026-06-06)
 - **"Menu" not "Pause"** for the in-match button — Ranked cannot be paused.
-- **Ratings = 1/2/3 stars, never medals.** No bronze/silver/gold naming for campaign/Trials (the `*_threshold` fields are the star cutoffs). Medal icons don't exist in the asset pack. (Note: Ranked *tier* names Bronze→Masters are unrelated and stand.)
+- **Ratings = 1/2/3 stars, never medals.** No bronze/silver/gold naming for campaign/Trials (the `*_threshold` fields are the star cutoffs). Medal icons don't exist in the asset pack. (Note: Ranked *tier* names Stone→Masters are a separate system and stand — see Ranked.)
 - **No em-dashes in game copy** (user-facing strings). Internal design docs are exempt.
 
 ## Core design (pillars)
@@ -32,7 +32,8 @@ near the top of each group; date in parens is when it locked.
 - **In-match layout** = single reserved right rail + maximized board. Authoritative: `design/INMATCH_HUD.md`. (2026-06-07)
 
 ## Ranked
-- **8 solo-queued players; pairwise lives-transfer elimination (Model B, zero-sum from round 1).** LP/MMR ladder, Bronze→Masters tiers, seasonal resets (one-tier drop). LP is MMR-anchored net-positive. (2026-06-06)
+- **Tier names = Stone → Bronze → Silver → Gold → Masters** (renamed 2026-06-10 from Bronze/Silver/Gold/Platinum/Masters). **Pure relabel — ladder scale, LP thresholds, demotion buffer, MMR pacing, and resim are all unchanged** (bands keep base 0/100/200/300/400). League-badge art maps 1:1 by name (diamond → Masters; wood unused). Tags: stn/brz/sil/gold/mas.
+- **8 solo-queued players; pairwise lives-transfer elimination (Model B, zero-sum from round 1).** LP/MMR ladder, Stone→Masters tiers, seasonal resets (one-tier drop). LP is MMR-anchored net-positive. (2026-06-06)
 - **Lobby floor = 4 at launch** (2 for the closed beta, with a documented revert). Forming lobby fills X/8; unanimous-of-present vote launches at 4–7, auto at 8; abstain = no; no timeout. Speed beats quality (aggressive band-widening; cross-tier matches are fine because LP is MMR-anchored). (2026-06-06)
 - **Ready-check ships OFF**; additive only if AFK-poisoning shows up. Post-launch drop = forfeit (empty-input board). Coordinator crash = void, no LP. (2026-06-06)
 - **Rank does not update mid-run** — lives-transfer resolves at round end, so mid-run rank is undefined.
@@ -41,6 +42,7 @@ near the top of each group; date in parens is when it locked.
 - **Match authority stays in the headless Godot server; Nakama = meta/matchmaker only** (hands clients a match_id/address). Overrides the orchestration doc's coordinator-in-Nakama suggestion — rewriting the verified GDScript coordinator in Go was wasteful. (2026-06-08)
 - **Identity: Steam auth → Nakama.** One identity across modes; display name = Steam persona; no custom account system. Device-auth now, Steam later. (2026-06-06)
 - **Anti-cheat = authoritative deterministic re-sim.** Server replays seed + ordered input log → derives the true score; client scores advisory. Source of truth for Trials scores AND Ranked placement. Closes score-injection (not botting — stated boundary). Ruleset versioning = grandfather + reset on balance patch (campaign all-time exempt). (2026-06-06)
+- **The whole map is one shared seed — incl. obstacles.** `map_generator.generate(seed)` derives path, checkpoints, AND obstacle placement deterministically; in MP the host issues one `hash(match_id)` seed and broadcasts it, and the resim rebuilds the map from `record[seed]`. So obstacles are deterministic + shared + resim-fed — never client-random. Obstacle ART may vary freely over a *fixed* footprint (cosmetic); varying the *footprint* is gameplay and rides the same seed. (2026-06-10)
 - **Backend box: `5.78.110.182`** (CPX31, 4 vCPU / 8 GB / 160 GB, Hetzner `hil`/us-west, Ubuntu). Runs BOTH the Nakama stack (Docker) and the Godot match server (systemd, UDP 8771). Firewall = 3 inbound rules (TCP 22, TCP 7350, UDP 8771). Console/gRPC loopback-bound — SSH tunnel only. Old CPX11 at `ash` (`178.156.171.215`) is deleted. (2026-06-08)
 - **Leaderboard board-id schema LOCKED** (`notes/leaderboard_schema.md`): campaign = 10 all-time boards; Trials = 60 ephemeral tournaments `trials_<window>_<scale>_<group>` (purge on reset); Ranked = one global tiered ladder per season `ranked_s<N>`.
 
