@@ -32,5 +32,7 @@ This is also the natural home for the queued juice/game-feel pass.
   testers congregate. Not started.
 - **IP/legal** — being a Random TD "spiritual successor" (Blizzard). Confirm clearance / safe
   framing; may have been handled earlier — don't assume.
-- Full GTM plan (capsule/tags/trailer spec, where the SC2 crowd actually gathers, festival
-  timing, streamer outreach) = its own session, weighted like a netcode phase.
+- **Festival timing** — concrete dated calendar lives in `notes/steam_fests.md` (Next Fest
+  Oct 19–26 2026 is the pre-launch target; reg closes ~early Sept; genre fests are post-launch).
+- Full GTM plan (capsule/tags/trailer spec, where the SC2 crowd actually gathers, streamer
+  outreach) = its own session, weighted like a netcode phase.
