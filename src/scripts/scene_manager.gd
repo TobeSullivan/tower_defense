@@ -40,6 +40,9 @@ var pending_seat_by_peer: Dictionary = {}  # {enet_peer_id: seat} — host uses 
 # distinguishes a networked ranked match from offline bot practice (which has no transport/lobby).
 var pending_ranked_avg_mmr := 150.0  # RankedLadder.SEED_MMR; overwritten by the real lobby avg
 var pending_is_ranked := false
+# Last season-task award ({points, completed}) from record_match — the match-end panel reads
+# it to show the season nudge. Refreshed every Trials/Ranked match; {} before any.
+var last_task_award: Dictionary = {}
 
 # Authored campaign missions, by mission index. Five missions — a tutorial curriculum
 # that ramps from zero, one new concept per mission (design/CAMPAIGN.md). The old
@@ -323,7 +326,8 @@ func _record_match_tasks(board, score: int) -> void:
 	if board.build_controller != null and is_instance_valid(board.build_controller):
 		towers = board.build_controller.towers.size()
 		zones = _zones_occupied(board)
-	TaskCatalog.record_match({
+	# Keep the {points, completed} result so the match-end panel can show the season nudge.
+	last_task_award = TaskCatalog.record_match({
 		"towers": towers, "zones": zones, "kills": board.total_kills, "score": score,
 	})
 

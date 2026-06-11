@@ -12,6 +12,7 @@ const StarRatingScript := preload("res://scripts/star_rating.gd")
 const LeaderboardService := preload("res://scripts/leaderboard_service.gd")
 const RankedLadder := preload("res://scripts/ranked_ladder.gd")
 const Motion := preload("res://scripts/motion.gd")
+const TaskCatalogScript := preload("res://scripts/task_catalog.gd")  # season nudge labels
 
 var round_manager  # RoundManager (local board) — untyped to avoid class-name cycle
 # Trials (PVE) leaderboard context: {window:int, tier:int, group:String}. Set by map_loader
@@ -28,6 +29,7 @@ var _detail_label: Label
 var _stars_row: HBoxContainer    # medal mode: the earned star tier
 var _thresholds_vbox: VBoxContainer
 var _lb_vbox: VBoxContainer       # Trials post-match placement block (Surface 1)
+var _season_vbox: VBoxContainer   # season-XP nudge (tasks completed this match) — Trials/Ranked
 var _buttons_vbox: VBoxContainer
 
 # Scrim dims the (now-static) board behind any result (design/JUICE.md victory_screen_mock:
@@ -138,6 +140,12 @@ func _build_ui() -> void:
 	_lb_vbox.add_theme_constant_override("separation", 6)
 	_lb_vbox.visible = false
 	vbox.add_child(_lb_vbox)
+
+	# Season-XP nudge (populated in Trials/Ranked when this match completed a task).
+	_season_vbox = VBoxContainer.new()
+	_season_vbox.add_theme_constant_override("separation", 6)
+	_season_vbox.visible = false
+	vbox.add_child(_season_vbox)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 8)
@@ -313,6 +321,7 @@ func _show_pvp_ranked(coord) -> void:
 	_thresholds_vbox.visible = false
 
 	_populate_ranked(result, coord)
+	_show_season_award()   # season-XP nudge if a task completed this Ranked match
 	_set_buttons([
 		{"text": "View season ladder", "cb": _on_view_season},
 		{"text": "Queue again ›", "cb": _on_find_new_match, "role": "go"},
@@ -536,6 +545,7 @@ func _show_medal() -> void:
 		buttons.push_front({"text": "View full board", "cb": _on_view_board})
 	else:
 		_lb_vbox.visible = false
+	_show_season_award()   # season-XP nudge if a task completed this Trials match
 	_set_buttons(buttons)
 	_panel.visible = true
 
@@ -689,6 +699,39 @@ func _set_buttons(specs: Array) -> void:
 			_: UiStyle.style_menu_button(b)
 		b.pressed.connect(spec["cb"])
 		_buttons_vbox.add_child(b)
+
+# Season-XP nudge: a green chip with the total XP earned this match + the tasks that
+# completed (Cadence: Shape ✓). Hidden when nothing crossed a threshold — the nudge is the
+# celebratory "you finished a task" beat, not a per-match noise line. Reads SceneManager's
+# cached record_match result.
+func _show_season_award() -> void:
+	for c in _season_vbox.get_children():
+		c.queue_free()
+	var award: Dictionary = SceneManager.last_task_award
+	var pts := int(award.get("points", 0))
+	if pts <= 0:
+		_season_vbox.visible = false
+		return
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", UiStyle.flat_box(Color("3b5a2a"), 12, UiStyle.START_BORDER, 2, false))
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left", 14); m.add_theme_constant_override("margin_right", 14)
+	m.add_theme_constant_override("margin_top", 8); m.add_theme_constant_override("margin_bottom", 8)
+	chip.add_child(m)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	m.add_child(v)
+	var head := _make_label(18, Color("dffacb"))
+	head.text = "+%s season XP" % _commas(pts)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	for t in award.get("completed", []):
+		var lbl := _make_label(13, UiStyle.LABEL_COL)
+		lbl.text = "%s: %s ✓" % [TaskCatalogScript.CADENCE_LABEL[t["cadence"]], TaskCatalogScript.SHAPE_LABEL[t["shape"]]]
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(lbl)
+	_season_vbox.add_child(chip)
+	_season_vbox.visible = true
 
 func _populate_thresholds(damage: int) -> void:
 	for child in _thresholds_vbox.get_children():

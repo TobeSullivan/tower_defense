@@ -3,8 +3,9 @@ Last updated: 2026-06-10
 
 ## Current focus
 S1 cosmetic implementation (CC): boards, ranked rename, apply-skins-in-match, Suburbia obstacles,
-full FX track (8, real art), frames/banners (wood 9-patch tinted), and the **Season Tasks panel**
-(the XP-earn surface) all implemented. Remaining: **post-match nudge** + judgment/tuning passes.
+full FX track (8, real art), frames/banners (wood 9-patch tinted), the **Season Tasks panel**
+(XP-earn surface), and the **post-match season nudge** all implemented. Remaining: judgment/tuning
+passes (FX facings/sizes, frames/banners proportions) + Beach (needs a top-down sand tile).
 
 ## ⏭ NEXT UP (start here next chat)
 S1 implementation, remaining phases:
@@ -23,9 +24,6 @@ S1 implementation, remaining phases:
    prestige (tinted wood, not true metal — flag if that's not acceptable). **Tuning open:** avatar
    frame reads small + the banner plank is a large empty expanse (card is wide); prestige metal look;
    maybe a `panel_headboards` arched banner instead of a plank. Verify via `collection_shot.tscn`.
-3. **Post-match Season nudge** — the Tasks panel exists now (Season screen toggle), but the match-end
-   overlay still doesn't surface tasks completed. `TaskCatalog.record_match` returns `{points, completed}`
-   (the chip data); wire a small "+N season XP · Daily: Get kills ✓" chip on the round-end overlay.
 - **Parked/flagged:** zone tint in-match (clashes with type-color legibility — design call);
   mob recolors (no-tint-painted-sprite rule conflict); aquatic-mob perspective check. **Beach T17
   STILL BLOCKED:** the uploaded `Tikibeachshopgameassetpack` is **side-view shop art** (walls/shelves/
